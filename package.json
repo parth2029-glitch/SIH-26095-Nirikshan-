@@ -1,0 +1,38 @@
+{
+  "name": "nirikshan",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Verifiable inspection & monitoring platform — SIH 2026 PS SIH26095",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/parth2029-glitch/SIH-2026---Nirikshan.git"
+  },
+  "workspaces": [
+    "apps/api",
+    "apps/dashboard",
+    "apps/mobile",
+    "packages/core"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:up": "docker compose -f infra/docker-compose.yml up -d",
+    "db:down": "docker compose -f infra/docker-compose.yml down",
+    "smoke:models": "node scripts/smoke-models.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.10.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.12.0",
+    "mongodb-memory-server": "^11.2.0",
+    "prettier": "^3.9.6"
+  }
+}

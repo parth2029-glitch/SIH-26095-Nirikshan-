@@ -1,0 +1,14 @@
+{
+  "name": "@nirikshan/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "mongoose": "^9.9.5"
+  }
+}

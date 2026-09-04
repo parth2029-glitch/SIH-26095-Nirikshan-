@@ -1,0 +1,35 @@
+# MongoDB only. Nothing else belongs here until §22 needs MediaMTX.
+# Replica set is enabled because §6 (override ledger) needs transactions,
+# and Mongo only offers transactions on a replica set — even a single-node one.
+services:
+  mongo:
+    image: mongo:7
+    container_name: nirikshan-mongo
+    restart: unless-stopped
+    command: ['--replSet', 'rs0', '--bind_ip_all']
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand("ping")']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Runs once, initiates the single-node replica set, exits.
+  mongo-init:
+    image: mongo:7
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: 'no'
+    entrypoint:
+      - bash
+      - -c
+      - >
+        mongosh --host mongo:27017 --quiet --eval
+        'try { rs.status() } catch (e) { rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]}) }'
+
+volumes:
+  mongo-data:

@@ -1,0 +1,42 @@
+# planning docs (kept local by team choice)
+README_template.md
+IMPLEMENTATION_PLAN.md
+IMPLEMENTATION_PLAN_V2.md
+
+# dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# env
+.env
+.env.*
+!.env.example
+
+# builds
+dist/
+build/
+.expo/
+.expo-shared/
+*.apk
+*.aab
+*.ipa
+apps/dashboard/dist/
+
+# evidence & fixtures uploads (binaries, never committed)
+fixtures/uploads/
+fixtures/tmp/
+
+# logs & caches
+*.log
+npm-debug.log*
+.cache/
+.eslintcache
+coverage/
+.mongodb-binaries/
+
+# editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
