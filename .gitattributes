@@ -1,0 +1,8 @@
+# Keep LF everywhere. Without this, a clone on Windows gets CRLF working
+# files and `npm run format:check` (endOfLine: lf) fails for that member.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.apk binary
