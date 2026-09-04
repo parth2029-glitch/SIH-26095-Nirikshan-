@@ -5,10 +5,13 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "dev": "node --watch server.js",
-    "start": "node server.js"
+    "dev": "node --env-file-if-exists=../../.env --watch server.js",
+    "start": "node --env-file-if-exists=../../.env server.js"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.9.5"
   }
 }

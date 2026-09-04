@@ -25,7 +25,9 @@
     "format:check": "prettier --check .",
     "db:up": "docker compose -f infra/docker-compose.yml up -d",
     "db:down": "docker compose -f infra/docker-compose.yml down",
-    "smoke:models": "node scripts/smoke-models.js"
+    "smoke:models": "node scripts/smoke-models.js",
+    "api:dev": "npm run dev -w apps/api",
+    "seed:users": "node --env-file-if-exists=.env scripts/seed-users.js"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

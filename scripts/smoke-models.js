@@ -12,6 +12,7 @@ import { connect, disconnect } from '../apps/api/db.js';
 import { models } from '../apps/api/models.js';
 
 const REQUIRED_INDEXES = {
+  users: ['email_1'],
   institutes: ['location_2dsphere'],
   evidenceitems: ['sha256_1', 'dHashBands_1'],
   overrideevents: ['seq_1', 'actorId_1_at_1'],
@@ -25,6 +26,13 @@ const now = new Date();
 // adds a required field fails here rather than in the seed script.
 function fixtures() {
   return {
+    User: {
+      email: 'smoke@pmu.gov.in',
+      // A real bcrypt hash shape; nothing here ever verifies it.
+      passwordHash: '$2b$10$' + 'x'.repeat(53),
+      name: 'Smoke User',
+      role: 'DIVISION',
+    },
     Institute: {
       name: 'Sunrise Boys Hostel',
       schemeType: 'HOSTEL',

@@ -38,6 +38,28 @@ const pointSchema = new Schema(
 
 const opts = { timestamps: true };
 
+// ── User — login identity, distinct from Inspector (§2) ──────────────────────
+// An Inspector is a person on a duty roster; a User is an account that can hold
+// a token. They are separate so an inspector can be assigned work before an
+// account exists, and so non-inspector roles need no roster row.
+const userSchema = new Schema(
+  {
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    // select:false, like InspectionCycle.seed — a careless `res.json(user)`
+    // must not be able to leak the hash.
+    passwordHash: { type: String, required: true, select: false },
+    name: { type: String, required: true },
+    role: { type: String, enum: ROLES, required: true },
+    // Scope claims. Copied into the JWT so a per-request scope check costs no
+    // database read (§2: an INSTITUTE token may only read its own record).
+    inspectorId: { type: Schema.Types.ObjectId, ref: 'Inspector', default: null },
+    instituteId: { type: Schema.Types.ObjectId, ref: 'Institute', default: null },
+    homeDistrict: String,
+    active: { type: Boolean, default: true },
+  },
+  opts,
+);
+
 // ── Institute ────────────────────────────────────────────────────────────────
 const instituteSchema = new Schema(
   {
@@ -232,6 +254,7 @@ const occupancySnapshotSchema = new Schema(
   opts,
 );
 
+export const User = model('User', userSchema);
 export const Institute = model('Institute', instituteSchema);
 export const Inspector = model('Inspector', inspectorSchema);
 export const InspectionCycle = model('InspectionCycle', inspectionCycleSchema);
@@ -243,6 +266,7 @@ export const OverrideEvent = model('OverrideEvent', overrideEventSchema);
 export const OccupancySnapshot = model('OccupancySnapshot', occupancySnapshotSchema);
 
 export const models = {
+  User,
   Institute,
   Inspector,
   InspectionCycle,

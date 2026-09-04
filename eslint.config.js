@@ -24,6 +24,11 @@ export default [
       sourceType: 'module',
       globals: { ...globals.node },
     },
+    rules: {
+      // Express recognises an error handler by its four-arg signature, so
+      // `next` must be declared even when unused.
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    },
   },
 
   // packages/core must stay platform-neutral: it runs in Node, a Vite build and

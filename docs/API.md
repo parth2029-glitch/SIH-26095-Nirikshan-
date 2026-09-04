@@ -32,7 +32,7 @@ Every non-2xx response uses this shape.
 | Status | `code` values |
 | --- | --- |
 | 400 | `VALIDATION_FAILED`, `CYCLE_STILL_OPEN`, `SEED_ALREADY_REVEALED` |
-| 401 | `NO_TOKEN`, `TOKEN_EXPIRED`, `BAD_CREDENTIALS` |
+| 401 | `NO_TOKEN`, `INVALID_TOKEN`, `TOKEN_EXPIRED`, `BAD_CREDENTIALS` |
 | 403 | `FORBIDDEN_ROLE`, `OUT_OF_SCOPE`, `OVERRIDE_REQUIRED`, `SELF_APPROVAL_BLOCKED` |
 | 404 | `NOT_FOUND` |
 | 409 | `DUPLICATE_IDEMPOTENCY_KEY`, `ASSIGNMENT_EXISTS` |
@@ -59,6 +59,7 @@ Every non-2xx response uses this shape.
 | GET | `/api/overrides/officer-rates` | DIVISION | §6 |
 | GET | `/api/dashboard/velocity` | DIVISION | §14 |
 | GET | `/api/dashboard/scorecard` | DIVISION | §14 |
+| GET | `/api/institutes/:id` | DISTRICT, DIVISION, AUDITOR, INSTITUTE (own) | §2 |
 | GET | `/api/institutes/:id/risk` | DISTRICT, DIVISION, INSTITUTE (own) | §19 |
 | POST | `/api/vc/sessions` | DISTRICT, DIVISION | §23 |
 | GET | `/api/stream/:instituteId/index.m3u8` | DISTRICT, DIVISION | §22 |
@@ -631,6 +632,31 @@ Query: `?cycles=12`
   "inspectorHoursAdded": 410
 }
 ```
+
+### `GET /api/institutes/:id`
+
+`DISTRICT`, `DIVISION`, `AUDITOR`, and `INSTITUTE` **for its own record only**. The scope is
+read off the `instituteId` claim in the token, so it holds regardless of what the UI hides.
+
+`200` — the `Institute` document.
+
+```json
+{
+  "_id": "66f0a1b2c3d4e5f600000042",
+  "name": "Sunrise Boys Hostel",
+  "schemeType": "HOSTEL",
+  "district": "Pune",
+  "state": "Maharashtra",
+  "location": { "type": "Point", "coordinates": [73.8567, 18.5204] },
+  "geofenceRadiusM": 150,
+  "reportedCapacity": 120,
+  "reportedOccupancy": 98,
+  "riskSignature": "CLEAN",
+  "riskScore": 0
+}
+```
+
+`403 OUT_OF_SCOPE` — an `INSTITUTE` token asking for another institute's record.
 
 ### `GET /api/institutes/:id/risk`
 
