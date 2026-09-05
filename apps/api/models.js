@@ -1,30 +1,16 @@
 import mongoose from 'mongoose';
+// Enums come from packages/core (§3) so the dashboard and the mobile app can
+// use them without importing Mongoose. This file owns schemas, not vocabulary.
+import {
+  ALLOCATION_TYPES,
+  OVERRIDE_EVENT_TYPES,
+  RISK_SIGNATURES,
+  ROLES,
+  SCHEME_TYPES,
+  SEVERITIES,
+} from '@nirikshan/core/constants';
 
 const { Schema, model } = mongoose;
-
-// Enums live here until §3 lifts them into packages/core/constants.js.
-export const SCHEME_TYPES = ['HOSTEL', 'SENIOR_HOME', 'DEADDICTION_CENTRE'];
-export const RISK_SIGNATURES = [
-  'GHOST_INTAKE',
-  'THRESHOLD_GAMING',
-  'PREPARED_VISIT',
-  'EVIDENCE_REUSE',
-  'INSPECTOR_CAPTURE',
-  'CLEAN',
-];
-export const ALLOCATION_TYPES = ['RANDOM', 'TARGETED'];
-export const SEVERITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
-export const ROLES = ['INSPECTOR', 'DISTRICT', 'DIVISION', 'INSTITUTE', 'BENEFICIARY', 'AUDITOR'];
-export const OVERRIDE_EVENT_TYPES = [
-  'ASSIGNMENT_CANCELLED',
-  'ASSIGNMENT_REASSIGNED',
-  'INSTITUTE_EXEMPTED',
-  'FINDING_DOWNGRADED',
-  'FINDING_DISMISSED',
-  'SLA_EXTENDED',
-  'REPORT_REOPENED',
-  'RECORDING_ENABLED',
-];
 
 // A sub-schema, not a plain object: a plain `{ type: ... }` literal collides
 // with Mongoose's own `type` key and is parsed as a type declaration.
