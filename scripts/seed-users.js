@@ -11,7 +11,20 @@ import { connect, disconnect } from '../apps/api/db.js';
 import { Institute, Inspector, User } from '../apps/api/models.js';
 import { hashPassword } from '../apps/api/auth.js';
 
-const PASSWORD = process.env.SEED_USER_PASSWORD || 'nirikshan-dev';
+/**
+ * A real database demands an explicit password. The in-memory fallback in uri()
+ * is throwaway, so a default is fine there — but these six accounts cover every
+ * role including DIVISION, and this file is public.
+ */
+const PASSWORD = (() => {
+  if (process.env.SEED_USER_PASSWORD) return process.env.SEED_USER_PASSWORD;
+  if (process.env.MONGODB_URI) {
+    throw new Error(
+      'SEED_USER_PASSWORD is required when MONGODB_URI is set — copy .env.example to .env',
+    );
+  }
+  return 'nirikshan-dev';
+})();
 
 let memoryServer;
 
