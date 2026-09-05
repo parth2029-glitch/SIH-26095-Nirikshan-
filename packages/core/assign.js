@@ -13,18 +13,9 @@
  * value the public verifier cannot reproduce, which silently breaks F1.
  */
 import seedrandom from 'seedrandom';
+import { ASSIGN_DEFAULTS } from './constants.js';
 
-/** Tuning knobs. Mirrored into `InspectionCycle.config` by §5. */
-export const ASSIGN_DEFAULTS = {
-  /** C1 — cycles a given inspector–institute pairing must sit out. */
-  noRepeatCycles: 4,
-  /** C3 — fraction above the pool mean an inspector's caseload may run. */
-  workloadTolerance: 0.15,
-  /** C4 — km across an inspector's cluster; `null` disables the check. */
-  maxTravelKmPerDay: 250,
-  /** Share of the cycle allocated by risk rather than at random (C5). */
-  targetedShare: 0.3,
-};
+export { ASSIGN_DEFAULTS };
 
 const EARTH_RADIUS_KM = 6371;
 const toRad = (deg) => (deg * Math.PI) / 180;

@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nirikshan — verify a cycle</title>
+
+    <!--
+      Public verification page (§5, PRD F1).
+
+      No account, no build step, no framework. It fetches the published record,
+      re-runs the *same* engine source the server ran, and decides for itself.
+      Nothing here trusts a verdict computed by the server — that is the point.
+
+      Classic script first: the UMD build sets Math.seedrandom, which the import
+      map below hands to assign()'s bare `seedrandom` specifier.
+    -->
+    <script src="/vendor/seedrandom.min.js"></script>
+    <script type="importmap">
+      { "imports": { "seedrandom": "/seedrandom-shim.js" } }
+    </script>
+
+    <style>
+      :root {
+        color-scheme: light dark;
+        --ink: #16181d;
+        --dim: #5b6472;
+        --line: #d7dbe2;
+        --bg: #f6f7f9;
+        --card: #fff;
+        --ok: #0a7a41;
+        --bad: #b3261e;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --ink: #e8eaee;
+          --dim: #99a2b0;
+          --line: #333944;
+          --bg: #14161a;
+          --card: #1c1f25;
+          --ok: #4ad07f;
+          --bad: #ff6b5e;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 2rem 1.25rem 4rem;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          15px/1.55 system-ui,
+          -apple-system,
+          Segoe UI,
+          sans-serif;
+      }
+      main {
+        max-width: 60rem;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 1.4rem;
+        margin: 0 0 0.25rem;
+      }
+      p.lede {
+        color: var(--dim);
+        margin: 0 0 1.5rem;
+        max-width: 46rem;
+      }
+      form {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+      }
+      input,
+      button {
+        font: inherit;
+        padding: 0.55rem 0.8rem;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--card);
+        color: var(--ink);
+      }
+      input {
+        flex: 1 1 22rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      button {
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .verdict {
+        border: 2px solid var(--line);
+        border-radius: 8px;
+        padding: 1rem 1.15rem;
+        margin-bottom: 1.25rem;
+        background: var(--card);
+      }
+      .verdict h2 {
+        margin: 0 0 0.3rem;
+        font-size: 1.6rem;
+        letter-spacing: 0.02em;
+      }
+      .verdict p {
+        margin: 0;
+        color: var(--dim);
+      }
+      .match {
+        border-color: var(--ok);
+      }
+      .match h2 {
+        color: var(--ok);
+      }
+      .mismatch {
+        border-color: var(--bad);
+      }
+      .mismatch h2 {
+        color: var(--bad);
+      }
+      .check {
+        border: 1px solid var(--line);
+        border-left-width: 4px;
+        border-radius: 6px;
+        background: var(--card);
+        padding: 0.8rem 1rem;
+        margin-bottom: 0.7rem;
+      }
+      .check.pass {
+        border-left-color: var(--ok);
+      }
+      .check.fail {
+        border-left-color: var(--bad);
+      }
+      .check.skip {
+        border-left-color: var(--line);
+      }
+      .check h3 {
+        margin: 0 0 0.2rem;
+        font-size: 0.95rem;
+      }
+      .check .state {
+        float: right;
+        font-weight: 700;
+        font-size: 0.8rem;
+        letter-spacing: 0.06em;
+      }
+      .pass .state {
+        color: var(--ok);
+      }
+      .fail .state {
+        color: var(--bad);
+      }
+      .skip .state {
+        color: var(--dim);
+      }
+      .check p {
+        margin: 0;
+        color: var(--dim);
+        font-size: 0.9rem;
+      }
+      code,
+      pre {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.82rem;
+        word-break: break-all;
+      }
+      pre {
+        margin: 0.5rem 0 0;
+        padding: 0.6rem;
+        background: var(--bg);
+        border-radius: 4px;
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+      footer {
+        margin-top: 2rem;
+        color: var(--dim);
+        font-size: 0.85rem;
+        border-top: 1px solid var(--line);
+        padding-top: 1rem;
+      }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <h1>Verify an inspection cycle</h1>
+      <p class="lede">
+        Every cycle publishes a commitment before its inspectors are drawn, and its random seed
+        after the cycle closes. This page fetches that public record and re-runs the assignment
+        engine in your browser. The server is not asked whether it cheated — the arithmetic is done
+        here, on your machine, from source you can read.
+      </p>
+
+      <form id="form">
+        <input
+          id="cycleId"
+          placeholder="Cycle id, e.g. 66f0a1b2c3d4e5f600000201"
+          spellcheck="false"
+        />
+        <button type="submit">Verify this cycle</button>
+      </form>
+
+      <div id="out"></div>
+
+      <footer>
+        Engine source: <a href="/core/assign.js">/core/assign.js</a> — the same file the server ran.
+        Public record: <code id="apiPath">/api/cycles/&lt;id&gt;/verify</code>.
+      </footer>
+    </main>
+
+    <script type="module" src="/verify.js"></script>
+  </body>
+</html>

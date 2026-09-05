@@ -70,6 +70,28 @@ export const REASON_CODES = {
   LEGAL_DIRECTIVE: 'Required by a legal or statutory directive',
 };
 
+// ── Assignment engine (PRD F1) ───────────────────────────────────────────────
+
+/**
+ * Tuning knobs for `assign()`, and the defaults `POST /api/cycles` writes into
+ * `InspectionCycle.config`.
+ *
+ * Deliberately not environment variables. A cycle is verified by replaying it
+ * against its own stored config, so a knob that could be changed per deployment
+ * would let an honest cycle replay as MISMATCH. These are the defaults for a
+ * *new* cycle; once a cycle exists, its stored config is the only authority.
+ */
+export const ASSIGN_DEFAULTS = {
+  /** C1 — cycles a given inspector–institute pairing must sit out. */
+  noRepeatCycles: 4,
+  /** C3 — fraction of one cycle's caseload an inspector may run ahead. */
+  workloadTolerance: 0.15,
+  /** C4 — km across an inspector's cluster; `null` disables the check. */
+  maxTravelKmPerDay: 250,
+  /** C5 — share of the cycle allocated by risk rather than at random. */
+  targetedShare: 0.3,
+};
+
 // ── Evidence trust score (PRD F3) ────────────────────────────────────────────
 
 /**

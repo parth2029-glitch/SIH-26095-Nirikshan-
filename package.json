@@ -27,7 +27,8 @@
     "db:down": "docker compose -f infra/docker-compose.yml down",
     "smoke:models": "node scripts/smoke-models.js",
     "api:dev": "npm run dev -w apps/api",
-    "seed:users": "node --env-file-if-exists=.env scripts/seed-users.js"
+    "seed:users": "node --env-file-if-exists=.env scripts/seed-users.js",
+    "demo:cycle": "node scripts/dev-demo.js"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

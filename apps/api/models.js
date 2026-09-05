@@ -3,11 +3,13 @@ import mongoose from 'mongoose';
 // use them without importing Mongoose. This file owns schemas, not vocabulary.
 import {
   ALLOCATION_TYPES,
+  ASSIGN_DEFAULTS,
   OVERRIDE_EVENT_TYPES,
   RISK_SIGNATURES,
   ROLES,
   SCHEME_TYPES,
   SEVERITIES,
+  TRUST_THRESHOLDS,
 } from '@nirikshan/core/constants';
 
 const { Schema, model } = mongoose;
@@ -55,7 +57,9 @@ const instituteSchema = new Schema(
     district: { type: String, required: true },
     state: { type: String, required: true },
     location: { type: pointSchema, required: true },
-    geofenceRadiusM: { type: Number, default: 150 },
+    // L6 compares against this radius; the fallback it uses when the field is
+    // absent lives in core, so both must be the same number.
+    geofenceRadiusM: { type: Number, default: TRUST_THRESHOLDS.geofenceRadiusM },
     reportedCapacity: Number,
     reportedOccupancy: Number,
     riskSignature: { type: String, enum: RISK_SIGNATURES, default: 'CLEAN' },
@@ -89,10 +93,23 @@ const inspectionCycleSchema = new Schema(
     seed: { type: String, required: true, select: false },
     seedRevealed: { type: Boolean, default: false },
     revealedAt: Date,
-    randomShare: { type: Number, default: 0.7 },
-    targetedShare: { type: Number, default: 0.3 },
+    // Derived from the one value the engine reads, so the two cannot drift
+    // apart into a cycle whose shares do not sum to 1.
+    randomShare: { type: Number, default: 1 - ASSIGN_DEFAULTS.targetedShare },
+    targetedShare: { type: Number, default: ASSIGN_DEFAULTS.targetedShare },
     status: { type: String, enum: ['OPEN', 'ASSIGNED', 'CLOSED', 'REVEALED'], default: 'OPEN' },
     config: { type: Schema.Types.Mixed, default: {} },
+    // The exact arrays handed to assign(), frozen at draw time and published
+    // verbatim by /verify. Not rebuilt on read: riskScore and workloadCount
+    // both move between the draw and the audit, so a verifier reading them
+    // live would replay an honest cycle as MISMATCH. Presence of this field is
+    // also what makes the assign endpoint idempotent (§5).
+    inputs: { type: Schema.Types.Mixed, default: null },
+    // Engine output that has no Assignment row to live on. Deferred institutes
+    // are an officer's reschedule queue; the relaxation log is what a verifier
+    // compares its own replay against.
+    deferred: { type: [Schema.Types.Mixed], default: [] },
+    constraintRelaxations: { type: [Schema.Types.Mixed], default: [] },
   },
   opts,
 );

@@ -50,6 +50,7 @@ Every non-2xx response uses this shape.
 | POST | `/api/cycles/:id/assign` | DIVISION | §5 |
 | POST | `/api/cycles/:id/reveal` | DIVISION | §5 |
 | GET | `/api/cycles/:id/verify` | **public** | §5 |
+| GET | `/verify.html?cycle=:id` | **public** | §5 (page, not API) |
 | GET | `/api/assignments/mine` | INSPECTOR | §7 |
 | POST | `/api/reports` | INSPECTOR | §9 |
 | POST | `/api/reports/:id/evidence` | INSPECTOR | §10 |
@@ -134,7 +135,13 @@ server-side, and never appears in a response until reveal.**
 }
 ```
 
-`commitmentHash = SHA-256(seed || cycleId)`, hex, lowercase.
+`commitmentHash = SHA-256(seed || cycleId)`, hex, lowercase. `||` is UTF-8 concatenation of the
+64-char hex seed and the 24-char ObjectId string, in that order — the browser recomputes it exactly,
+so the encoding is contract, not implementation detail.
+
+`config` is merged over the defaults in `packages/core/constants.js` and stored on the cycle. Once
+written it is the only authority for that cycle: a replay uses the stored config, never today's
+defaults.
 
 ### `POST /api/cycles/:id/assign`
 
@@ -163,12 +170,21 @@ existing result with `created: false` and writes nothing.
 }
 ```
 
+`dryRun: true` runs the engine and returns the same summary with `created: false, dryRun: true`,
+writing nothing.
+
+Running the draw also **snapshots** the exact `institutes`, `inspectors` and `history` arrays passed
+to `assign()` onto the cycle. `/verify` publishes that snapshot verbatim rather than re-reading the
+collections: `riskScore` and `workloadCount` both move between the draw and the audit, and a
+verifier reading them live would replay an honest cycle as MISMATCH.
+
 `422 CONSTRAINTS_UNSATISFIABLE` if every institute defers.
 
 ### `POST /api/cycles/:id/reveal`
 
-`DIVISION`. Exposes the seed and closes the cycle. Refuses while the cycle is still `OPEN` —
-revealing early would let institutes predict the draw.
+`DIVISION`. Exposes the seed and closes the cycle. Refuses while the cycle is still open — in either
+sense: no draw has been run yet (`status: OPEN`), or `periodEnd` has not passed. Revealing before
+the period closes hands every institute the inspector it is about to receive.
 
 ```json
 { "confirm": true }
@@ -187,6 +203,7 @@ revealing early would let institutes predict the draw.
 ```
 
 `400 CYCLE_STILL_OPEN` — `details` carries `{ "closesAt": "2026-10-31T23:59:59.000Z" }`.
+`400 SEED_ALREADY_REVEALED` — a second reveal is refused, not silently repeated.
 
 ### `GET /api/cycles/:id/verify`
 
@@ -237,12 +254,18 @@ proves nothing. The dashboard page recomputes both the commitment and the assign
       "dueDate": "2026-10-14T00:00:00.000Z"
     }
   ],
-  "deferred": []
+  "deferred": [],
+  "constraintRelaxations": []
 }
 ```
 
 Before reveal: `seed` is `null`, `seedRevealed` is `false` and `assignments` is `[]`. The commitment
 is still published, so its timestamp is checkable against the assignment date.
+
+The reader is the verifier. The page at `/verify.html` recomputes the commitment with
+`crypto.subtle`, imports `assign()` from `/core/assign.js` — the same source the server ran, served
+unbundled so it can be read — and compares. Nothing in this response is a verdict, deliberately: a
+"MATCH" computed by the server that could have rigged the draw proves nothing.
 
 `inputs` must carry **every** field `assign()` reads, or the replay cannot reproduce the draw and an
 honest cycle reports MISMATCH. Today that means `location.coordinates` on each institute (C4 measures

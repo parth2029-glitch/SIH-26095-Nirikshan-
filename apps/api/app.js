@@ -1,11 +1,23 @@
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { authGate, fail, login, requireInstituteScope, requireRole } from './auth.js';
+import { assignCycle, createCycle, revealCycle, verifyCycle } from './cycles.js';
 import { Institute } from './models.js';
+
+const repoFile = (path) => fileURLToPath(new URL(`../../${path}`, import.meta.url));
 
 /** Built as a factory so tests can listen on an ephemeral port (§2, §15). */
 export function createApp() {
   const app = express();
   app.use(express.json({ limit: '1mb' }));
+
+  // Mounted ahead of authGate on purpose: the F1 verification page has to load
+  // for someone with no account at all, and it replays the draw by importing
+  // the very same engine source the server ran. Publishing that source is the
+  // feature. §13 moves this behind Vite; the paths stay.
+  app.use(express.static(repoFile('apps/dashboard/public')));
+  app.use('/core', express.static(repoFile('packages/core')));
+  app.use('/vendor', express.static(repoFile('node_modules/seedrandom')));
 
   // Mounted before every route: auth is opt-out (see PUBLIC_PATHS), not opt-in.
   app.use(authGate);
@@ -13,6 +25,13 @@ export function createApp() {
   app.get('/health', (req, res) => res.json({ ok: true }));
 
   app.post('/api/auth/login', login);
+
+  // ── Commit–reveal (§5, PRD F1) ─────────────────────────────────────────────
+  app.post('/api/cycles', requireRole('DIVISION'), createCycle);
+  app.post('/api/cycles/:id/assign', requireRole('DIVISION'), assignCycle);
+  app.post('/api/cycles/:id/reveal', requireRole('DIVISION'), revealCycle);
+  // Public by design — PUBLIC_PATHS in auth.js lets this one through the gate.
+  app.get('/api/cycles/:id/verify', verifyCycle);
 
   // §6 owns the handler. Mounted now so the role guard is real and testable —
   // an INSPECTOR token must get 403 here, not 404.
