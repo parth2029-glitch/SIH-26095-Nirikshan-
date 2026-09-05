@@ -7,7 +7,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/parth2029-glitch/SIH-2026---Nirikshan.git"
+    "url": "git+https://github.com/parth2029-glitch/SIH-26095-Nirikshan-.git"
   },
   "workspaces": [
     "apps/api",
