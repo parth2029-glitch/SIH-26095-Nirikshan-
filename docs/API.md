@@ -210,7 +210,13 @@ proves nothing. The dashboard page recomputes both the commitment and the assign
   },
   "inputs": {
     "institutes": [
-      { "id": "66f0a1b2c3d4e5f600000001", "district": "Pune", "schemeType": "HOSTEL", "riskScore": 0.31 }
+      {
+        "id": "66f0a1b2c3d4e5f600000001",
+        "district": "Pune",
+        "schemeType": "HOSTEL",
+        "riskScore": 0.31,
+        "location": { "coordinates": [73.8567, 18.5204] }
+      }
     ],
     "inspectors": [
       { "id": "66f0a1b2c3d4e5f600000101", "homeDistrict": "Nagpur", "workloadCount": 6 }
@@ -237,6 +243,12 @@ proves nothing. The dashboard page recomputes both the commitment and the assign
 
 Before reveal: `seed` is `null`, `seedRevealed` is `false` and `assignments` is `[]`. The commitment
 is still published, so its timestamp is checkable against the assignment date.
+
+`inputs` must carry **every** field `assign()` reads, or the replay cannot reproduce the draw and an
+honest cycle reports MISMATCH. Today that means `location.coordinates` on each institute (C4 measures
+distances between them) and `history` ordered **newest cycle first** — C1's window is the first
+`config.noRepeatCycles` distinct `cycleId`s in that array, so its order is part of the input, not a
+presentation choice.
 
 ---
 
