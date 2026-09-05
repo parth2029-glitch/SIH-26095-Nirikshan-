@@ -20,7 +20,7 @@ import { Assignment, Inspector, Institute, User } from '../apps/api/models.js';
 
 const PORT = Number(process.env.PORT) || 4000;
 const BASE = `http://127.0.0.1:${PORT}`;
-const EMAIL = 'division@pmu.gov.in';
+const EMAIL = 'division@example.test';
 const PASSWORD = 'nirikshan-dev';
 const DISTRICTS = ['Pune', 'Nagpur', 'Nashik', 'Thane', 'Amravati'];
 

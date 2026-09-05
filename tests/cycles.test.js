@@ -18,7 +18,7 @@ import { createApp } from '../apps/api/app.js';
 import { hashPassword } from '../apps/api/auth.js';
 import { Assignment, InspectionCycle, Inspector, Institute, User } from '../apps/api/models.js';
 
-const PASSWORD = 'correct-horse-battery-staple';
+const PASSWORD = 'test-only-password';
 const DISTRICTS = ['Pune', 'Nagpur', 'Nashik', 'Thane', 'Amravati'];
 
 let memoryServer;
@@ -79,8 +79,8 @@ before(async () => {
 
   const passwordHash = await hashPassword(PASSWORD);
   await User.create([
-    { email: 'division@pmu.gov.in', name: 'V. Rao', role: 'DIVISION', passwordHash },
-    { email: 'inspector@pmu.gov.in', name: 'A. Sharma', role: 'INSPECTOR', passwordHash },
+    { email: 'division@example.test', name: 'V. Rao', role: 'DIVISION', passwordHash },
+    { email: 'inspector@example.test', name: 'A. Sharma', role: 'INSPECTOR', passwordHash },
   ]);
 
   server = createApp().listen(0);
@@ -93,8 +93,8 @@ before(async () => {
         await call('/api/auth/login', { method: 'POST', body: { email, password: PASSWORD } }),
       )
     ).body.token;
-  divisionToken = await token('division@pmu.gov.in');
-  inspectorToken = await token('inspector@pmu.gov.in');
+  divisionToken = await token('division@example.test');
+  inspectorToken = await token('inspector@example.test');
 });
 
 after(async () => {

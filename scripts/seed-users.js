@@ -76,7 +76,7 @@ async function main() {
   ];
 
   for (const account of accounts) {
-    const email = `${account.role.toLowerCase()}@pmu.gov.in`;
+    const email = `${account.role.toLowerCase()}@example.test`;
     const user = await upsert(User, { email }, { ...account, email, passwordHash });
     console.log(`ok  ${account.role.padEnd(12)} ${email}  instituteId=${user.instituteId ?? '—'}`);
   }

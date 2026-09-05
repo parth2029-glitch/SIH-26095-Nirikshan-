@@ -27,7 +27,7 @@ const now = new Date();
 function fixtures() {
   return {
     User: {
-      email: 'smoke@pmu.gov.in',
+      email: 'smoke@example.test',
       // A real bcrypt hash shape; nothing here ever verifies it.
       passwordHash: '$2b$10$' + 'x'.repeat(53),
       name: 'Smoke User',

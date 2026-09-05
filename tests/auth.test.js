@@ -12,7 +12,7 @@ import { createApp } from '../apps/api/app.js';
 import { hashPassword } from '../apps/api/auth.js';
 import { Institute, User } from '../apps/api/models.js';
 
-const PASSWORD = 'correct-horse-battery-staple';
+const PASSWORD = 'test-only-password';
 
 let memoryServer;
 let server;
@@ -57,10 +57,10 @@ before(async () => {
 
   const passwordHash = await hashPassword(PASSWORD);
   await User.create([
-    { email: 'inspector@pmu.gov.in', name: 'A. Sharma', role: 'INSPECTOR', passwordHash },
-    { email: 'division@pmu.gov.in', name: 'V. Rao', role: 'DIVISION', passwordHash },
+    { email: 'inspector@example.test', name: 'A. Sharma', role: 'INSPECTOR', passwordHash },
+    { email: 'division@example.test', name: 'V. Rao', role: 'DIVISION', passwordHash },
     {
-      email: 'institute@pmu.gov.in',
+      email: 'institute@example.test',
       name: 'Hostel Admin',
       role: 'INSTITUTE',
       instituteId: ownInstitute._id,
@@ -80,7 +80,7 @@ after(async () => {
 });
 
 test('login returns a JWT carrying userId and role', async () => {
-  const { status, body } = await login('inspector@pmu.gov.in');
+  const { status, body } = await login('inspector@example.test');
   assert.equal(status, 200);
   assert.equal(body.user.role, 'INSPECTOR');
 
@@ -91,8 +91,8 @@ test('login returns a JWT carrying userId and role', async () => {
 });
 
 test('a wrong password is indistinguishable from an unknown email', async () => {
-  const wrongPassword = await login('inspector@pmu.gov.in', 'not-the-password');
-  const unknownEmail = await login('ghost@pmu.gov.in', 'not-the-password');
+  const wrongPassword = await login('inspector@example.test', 'not-the-password');
+  const unknownEmail = await login('ghost@example.test', 'not-the-password');
 
   assert.equal(wrongPassword.status, 401);
   assert.equal(wrongPassword.body.error.code, 'BAD_CREDENTIALS');
@@ -118,7 +118,7 @@ test('the public verify path stays reachable without a token', async () => {
 });
 
 test('an Inspector token gets 403 on /api/overrides', async () => {
-  const inspector = await login('inspector@pmu.gov.in');
+  const inspector = await login('inspector@example.test');
   const res = await call('/api/overrides', {
     token: inspector.body.token,
     method: 'POST',
@@ -132,7 +132,7 @@ test('an Inspector token gets 403 on /api/overrides', async () => {
 
   // Same route, an allowed role: proves the 403 came from the role guard and
   // not from the route being unreachable for everyone.
-  const division = await login('division@pmu.gov.in');
+  const division = await login('division@example.test');
   const allowed = await call('/api/overrides', {
     token: division.body.token,
     method: 'POST',
@@ -142,7 +142,7 @@ test('an Inspector token gets 403 on /api/overrides', async () => {
 });
 
 test('an Institute token cannot read another institute', async () => {
-  const { body } = await login('institute@pmu.gov.in');
+  const { body } = await login('institute@example.test');
 
   const own = await call(`/api/institutes/${ownInstitute._id}`, { token: body.token });
   assert.equal(own.status, 200);
@@ -153,7 +153,7 @@ test('an Institute token cannot read another institute', async () => {
   assert.equal((await other.json()).error.code, 'OUT_OF_SCOPE');
 
   // A DIVISION token reads both — the scope narrows INSTITUTE only.
-  const division = await login('division@pmu.gov.in');
+  const division = await login('division@example.test');
   const wide = await call(`/api/institutes/${otherInstitute._id}`, { token: division.body.token });
   assert.equal(wide.status, 200);
 });

@@ -74,7 +74,7 @@ Every non-2xx response uses this shape.
 Public.
 
 ```json
-{ "email": "inspector7@pmu.gov.in", "password": "hunter2", "deviceId": "a1b2c3d4e5f6" }
+{ "email": "inspector7@example.test", "password": "<password>", "deviceId": "a1b2c3d4e5f6" }
 ```
 
 `deviceId` is optional and mobile-only. When present the response carries `deviceHmacKey`, the
@@ -84,7 +84,7 @@ per-device signing key from §8 — returned **once, at login**, never re-fetcha
 
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "token": "<jwt>",
   "expiresAt": "2026-09-05T22:00:00.000Z",
   "user": {
     "id": "66f0a1b2c3d4e5f600000001",
@@ -94,7 +94,7 @@ per-device signing key from §8 — returned **once, at login**, never re-fetcha
     "homeDistrict": "Pune",
     "instituteId": null
   },
-  "deviceHmacKey": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+  "deviceHmacKey": "<64-char hex device key>"
 }
 ```
 
@@ -354,7 +354,7 @@ An `Idempotency-Key` header is required. Replaying the same key returns the orig
           "mocked": false
         }
       ],
-      "signature": "2f1dc9a45b...",
+      "signature": "<hmac-sha256 hex>",
       "evidenceClientIds": ["b7c8d9e0-1111-2222-3333-444455556666"]
     }
   ]
@@ -763,7 +763,7 @@ dashboard must label it provisional.
   "instituteId": "66f0a1b2c3d4e5f600000042",
   "roomName": "nirikshan-42-8f3a1c",
   "joinUrl": "https://meet.jit.si/nirikshan-42-8f3a1c",
-  "jwt": "eyJhbGciOiJIUzI1NiIs...",
+  "jwt": "<jwt>",
   "scheduledAt": "2026-11-12T10:00:00.000Z",
   "durationMinutes": 20,
   "recordingEnabled": false,
