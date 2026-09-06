@@ -1,0 +1,118 @@
+{
+  "id": "senior-home.v1",
+  "version": 1,
+  "schemeType": "SENIOR_HOME",
+  "sections": [
+    {
+      "id": "occupancy",
+      "title": { "en": "Occupancy & Records", "hi": "निवास एवं अभिलेख" },
+      "items": [
+        {
+          "id": "headcount",
+          "type": "number",
+          "label": { "en": "Residents physically present", "hi": "उपस्थित निवासियों की संख्या" },
+          "severity": "CRITICAL"
+        },
+        {
+          "id": "admission-register",
+          "type": "bool",
+          "label": {
+            "en": "Admission register matches headcount",
+            "hi": "प्रवेश रजिस्टर गणना से मेल खाता है"
+          },
+          "severity": "HIGH"
+        },
+        {
+          "id": "register-photo",
+          "type": "photo",
+          "label": { "en": "Photograph of the admission register", "hi": "प्रवेश रजिस्टर का फोटो" },
+          "severity": "HIGH"
+        }
+      ]
+    },
+    {
+      "id": "medical",
+      "title": { "en": "Medical Care", "hi": "चिकित्सा सुविधा" },
+      "items": [
+        {
+          "id": "doctor-visits",
+          "type": "choice",
+          "label": { "en": "Visiting doctor frequency", "hi": "चिकित्सक की उपस्थिति" },
+          "options": [
+            { "value": "RESIDENT", "label": { "en": "Resident", "hi": "स्थायी" } },
+            { "value": "WEEKLY", "label": { "en": "Weekly", "hi": "साप्ताहिक" } },
+            { "value": "MONTHLY", "label": { "en": "Monthly", "hi": "मासिक" } },
+            { "value": "NONE", "label": { "en": "None", "hi": "कोई नहीं" } }
+          ],
+          "severity": "CRITICAL"
+        },
+        {
+          "id": "medicine-stock",
+          "type": "bool",
+          "label": {
+            "en": "Essential medicines in stock and in date",
+            "hi": "आवश्यक दवाएँ स्टॉक में एवं वैध हैं"
+          },
+          "severity": "CRITICAL"
+        },
+        {
+          "id": "medicine-photo",
+          "type": "photo",
+          "label": { "en": "Photograph of the medicine cabinet", "hi": "दवा अलमारी का फोटो" },
+          "severity": "HIGH"
+        }
+      ]
+    },
+    {
+      "id": "sanitation",
+      "title": { "en": "Sanitation & Hygiene", "hi": "स्वच्छता" },
+      "items": [
+        {
+          "id": "bedding-clean",
+          "type": "bool",
+          "label": { "en": "Bedding clean and changed", "hi": "बिस्तर साफ एवं बदला हुआ है" },
+          "severity": "HIGH"
+        },
+        {
+          "id": "toilets-working",
+          "type": "number",
+          "label": { "en": "Working toilets", "hi": "चालू शौचालयों की संख्या" },
+          "severity": "HIGH"
+        },
+        {
+          "id": "ward-photo",
+          "type": "photo",
+          "label": { "en": "Photograph of the residents' ward", "hi": "निवासी कक्ष का फोटो" },
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "id": "accessibility",
+      "title": { "en": "Safety & Accessibility", "hi": "सुरक्षा एवं सुगम्यता" },
+      "items": [
+        {
+          "id": "ramps-rails",
+          "type": "bool",
+          "label": {
+            "en": "Ramps and handrails present where needed",
+            "hi": "आवश्यक स्थानों पर रैंप एवं रेलिंग हैं"
+          },
+          "severity": "HIGH"
+        },
+        {
+          "id": "emergency-call",
+          "type": "bool",
+          "label": { "en": "Emergency call system working", "hi": "आपातकालीन कॉल प्रणाली चालू है" },
+          "severity": "CRITICAL"
+        },
+        {
+          "id": "accessibility-notes",
+          "type": "text",
+          "label": { "en": "Accessibility barriers observed", "hi": "देखी गई सुगम्यता बाधाएँ" },
+          "severity": "MEDIUM"
+        }
+      ]
+    }
+  ]
+}

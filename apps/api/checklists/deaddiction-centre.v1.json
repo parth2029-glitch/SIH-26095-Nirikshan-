@@ -1,0 +1,115 @@
+{
+  "id": "deaddiction-centre.v1",
+  "version": 1,
+  "schemeType": "DEADDICTION_CENTRE",
+  "sections": [
+    {
+      "id": "occupancy",
+      "title": { "en": "Occupancy & Records", "hi": "निवास एवं अभिलेख" },
+      "items": [
+        {
+          "id": "headcount",
+          "type": "number",
+          "label": { "en": "Inmates physically present", "hi": "उपस्थित निवासियों की संख्या" },
+          "severity": "CRITICAL"
+        },
+        {
+          "id": "consent-records",
+          "type": "bool",
+          "label": {
+            "en": "Written admission consent on file for every inmate",
+            "hi": "प्रत्येक निवासी हेतु लिखित प्रवेश सहमति उपलब्ध है"
+          },
+          "severity": "CRITICAL"
+        },
+        {
+          "id": "register-photo",
+          "type": "photo",
+          "label": { "en": "Photograph of the admission register", "hi": "प्रवेश रजिस्टर का फोटो" },
+          "severity": "HIGH"
+        }
+      ]
+    },
+    {
+      "id": "clinical",
+      "title": { "en": "Clinical Staff & Treatment", "hi": "चिकित्सा कर्मी एवं उपचार" },
+      "items": [
+        {
+          "id": "qualified-staff",
+          "type": "number",
+          "label": {
+            "en": "Qualified medical staff on duty",
+            "hi": "ड्यूटी पर योग्य चिकित्साकर्मी"
+          },
+          "severity": "CRITICAL"
+        },
+        {
+          "id": "detox-protocol",
+          "type": "bool",
+          "label": {
+            "en": "Written detoxification protocol displayed",
+            "hi": "लिखित विषहरण प्रोटोकॉल प्रदर्शित है"
+          },
+          "severity": "HIGH"
+        },
+        {
+          "id": "staff-roster-photo",
+          "type": "photo",
+          "label": { "en": "Photograph of the duty roster", "hi": "ड्यूटी रोस्टर का फोटो" },
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "id": "rehabilitation",
+      "title": { "en": "Counselling & Rehabilitation", "hi": "परामर्श एवं पुनर्वास" },
+      "items": [
+        {
+          "id": "counsellor-present",
+          "type": "bool",
+          "label": { "en": "Counsellor present on site", "hi": "परामर्शदाता स्थल पर उपस्थित है" },
+          "severity": "HIGH"
+        },
+        {
+          "id": "sessions-week",
+          "type": "number",
+          "label": {
+            "en": "Counselling sessions held last week",
+            "hi": "पिछले सप्ताह हुए परामर्श सत्र"
+          },
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "id": "restraint",
+      "title": { "en": "Safety & Restraint Practices", "hi": "सुरक्षा एवं अवरोध प्रथाएँ" },
+      "items": [
+        {
+          "id": "no-locked-confinement",
+          "type": "bool",
+          "label": {
+            "en": "No inmate held in locked confinement",
+            "hi": "कोई निवासी बंद कक्ष में नहीं रखा गया है"
+          },
+          "severity": "CRITICAL"
+        },
+        {
+          "id": "grievance-box",
+          "type": "bool",
+          "label": {
+            "en": "Grievance box accessible to inmates",
+            "hi": "शिकायत पेटी निवासियों की पहुँच में है"
+          },
+          "severity": "HIGH"
+        },
+        {
+          "id": "restraint-notes",
+          "type": "text",
+          "label": { "en": "Restraint practices observed", "hi": "देखी गई अवरोध प्रथाएँ" },
+          "severity": "HIGH"
+        }
+      ]
+    }
+  ]
+}

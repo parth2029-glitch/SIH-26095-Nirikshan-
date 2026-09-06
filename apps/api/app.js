@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { authGate, fail, login, requireInstituteScope, requireRole } from './auth.js';
+import { listMyAssignments } from './assignments.js';
 import { assignCycle, createCycle, revealCycle, verifyCycle } from './cycles.js';
 import { getOfficerRates, getVerifyChain, postOverride } from './overrides.js';
 import { Institute } from './models.js';
@@ -41,6 +42,9 @@ export function createApp() {
   // AUDITOR reads the chain but cannot write to it — the point of an auditor.
   app.get('/api/overrides/verify-chain', requireRole('DIVISION', 'AUDITOR'), getVerifyChain);
   app.get('/api/overrides/officer-rates', requireRole('DIVISION'), getOfficerRates);
+
+  // ── Inspector workflow (§7, PRD F2) ──────────────────────────────
+  app.get('/api/assignments/mine', requireRole('INSPECTOR'), listMyAssignments);
 
   app.get(
     '/api/institutes/:id',

@@ -96,7 +96,9 @@ export default [
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
-      globals: { ...globals.browser, __DEV__: 'readonly' },
+      // `process.env.EXPO_PUBLIC_*` is how Expo hands config to the bundle —
+      // Babel inlines it at build time and React Native shims the rest (§7).
+      globals: { ...globals.browser, __DEV__: 'readonly', process: 'readonly' },
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },

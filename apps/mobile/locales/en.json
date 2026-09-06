@@ -1,0 +1,48 @@
+{
+  "app": { "name": "Nirikshan", "language": "Language" },
+  "login": {
+    "title": "Inspector sign-in",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "working": "Signing in…",
+    "required": "Enter your email and password.",
+    "BAD_CREDENTIALS": "Email or password is incorrect.",
+    "offline": "Cannot reach the server. Check your connection."
+  },
+  "inbox": {
+    "title": "My assignments",
+    "empty": "No assignments pending.",
+    "due": "Due {{date}}",
+    "overdue": "Overdue",
+    "refresh": "Pull to refresh",
+    "loadFailed": "Could not load assignments.",
+    "signOut": "Sign out",
+    "allocation": { "RANDOM": "Random draw", "TARGETED": "Risk-targeted" }
+  },
+  "institute": {
+    "title": "Institute",
+    "scheme": "Scheme",
+    "district": "District",
+    "capacity": "Reported capacity",
+    "occupancy": "Reported occupancy",
+    "geofence": "Geofence radius",
+    "metres": "{{n}} m",
+    "notCached": "This assignment is not on the device. Return to the inbox.",
+    "startInspection": "Start inspection"
+  },
+  "inspect": {
+    "title": "Inspection",
+    "noChecklist": "No checklist is published for this scheme.",
+    "yes": "Yes",
+    "no": "No",
+    "photoPending": "Camera capture arrives in §8",
+    "answered": "{{done}} of {{total}} answered",
+    "save": "Save draft"
+  },
+  "scheme": {
+    "HOSTEL": "Hostel",
+    "SENIOR_HOME": "Senior home",
+    "DEADDICTION_CENTRE": "De-addiction centre"
+  }
+}

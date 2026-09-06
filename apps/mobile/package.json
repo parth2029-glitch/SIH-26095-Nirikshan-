@@ -2,9 +2,32 @@
   "name": "@nirikshan/mobile",
   "version": "1.0.0",
   "private": true,
-  "main": "index.js",
-  "scripts": {},
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start --dev-client",
+    "android": "expo run:android",
+    "fix-deps": "expo install --fix"
+  },
   "dependencies": {
-    "@nirikshan/core": "1.0.0"
+    "@nirikshan/core": "1.0.0",
+    "expo": "57.0.20",
+    "expo-camera": "57.0.4",
+    "expo-crypto": "57.0.2",
+    "expo-device": "57.0.1",
+    "expo-image-manipulator": "57.0.16",
+    "expo-localization": "57.0.1",
+    "expo-location": "57.0.16",
+    "expo-router": "57.0.19",
+    "expo-secure-store": "57.0.3",
+    "expo-sqlite": "57.0.2",
+    "expo-status-bar": "57.0.1",
+    "i18n-js": "4.5.3",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0"
+  },
+  "devDependencies": {
+    "@expo/cli": "^0.24.0"
   }
 }

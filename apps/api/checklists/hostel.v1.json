@@ -1,0 +1,117 @@
+{
+  "id": "hostel.v1",
+  "version": 1,
+  "schemeType": "HOSTEL",
+  "sections": [
+    {
+      "id": "occupancy",
+      "title": { "en": "Occupancy & Records", "hi": "निवास एवं अभिलेख" },
+      "items": [
+        {
+          "id": "headcount",
+          "type": "number",
+          "label": { "en": "Residents physically present", "hi": "उपस्थित निवासियों की संख्या" },
+          "severity": "CRITICAL"
+        },
+        {
+          "id": "register-current",
+          "type": "bool",
+          "label": {
+            "en": "Attendance register updated today",
+            "hi": "उपस्थिति रजिस्टर आज अद्यतन है"
+          },
+          "severity": "HIGH"
+        },
+        {
+          "id": "roll-photo",
+          "type": "photo",
+          "label": {
+            "en": "Photograph of the attendance register",
+            "hi": "उपस्थिति रजिस्टर का फोटो"
+          },
+          "severity": "HIGH"
+        }
+      ]
+    },
+    {
+      "id": "sanitation",
+      "title": { "en": "Sanitation & Hygiene", "hi": "स्वच्छता" },
+      "items": [
+        {
+          "id": "toilets-working",
+          "type": "number",
+          "label": { "en": "Working toilets", "hi": "चालू शौचालयों की संख्या" },
+          "severity": "HIGH"
+        },
+        {
+          "id": "water-supply",
+          "type": "choice",
+          "label": { "en": "Drinking water supply", "hi": "पेयजल आपूर्ति" },
+          "options": [
+            { "value": "CONTINUOUS", "label": { "en": "Continuous", "hi": "निरंतर" } },
+            { "value": "INTERMITTENT", "label": { "en": "Intermittent", "hi": "रुक-रुक कर" } },
+            { "value": "ABSENT", "label": { "en": "Absent", "hi": "अनुपलब्ध" } }
+          ],
+          "severity": "CRITICAL"
+        },
+        {
+          "id": "toilet-photo",
+          "type": "photo",
+          "label": { "en": "Photograph of the toilet block", "hi": "शौचालय ब्लॉक का फोटो" },
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "id": "nutrition",
+      "title": { "en": "Food & Nutrition", "hi": "भोजन एवं पोषण" },
+      "items": [
+        {
+          "id": "menu-displayed",
+          "type": "bool",
+          "label": { "en": "Weekly menu displayed", "hi": "साप्ताहिक मेन्यू प्रदर्शित है" },
+          "severity": "LOW"
+        },
+        {
+          "id": "meals-served",
+          "type": "number",
+          "label": { "en": "Meals served yesterday", "hi": "कल परोसे गए भोजन" },
+          "severity": "MEDIUM"
+        },
+        {
+          "id": "kitchen-photo",
+          "type": "photo",
+          "label": { "en": "Photograph of the kitchen", "hi": "रसोई का फोटो" },
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "id": "safety",
+      "title": { "en": "Safety & Infrastructure", "hi": "सुरक्षा एवं अवसंरचना" },
+      "items": [
+        {
+          "id": "fire-extinguisher",
+          "type": "bool",
+          "label": {
+            "en": "Fire extinguisher present and in date",
+            "hi": "अग्निशामक उपलब्ध एवं वैध है"
+          },
+          "severity": "CRITICAL"
+        },
+        {
+          "id": "warden-present",
+          "type": "bool",
+          "label": { "en": "Warden present on site", "hi": "वार्डन स्थल पर उपस्थित है" },
+          "severity": "HIGH"
+        },
+        {
+          "id": "structural-notes",
+          "type": "text",
+          "label": { "en": "Structural defects observed", "hi": "देखी गई संरचनात्मक कमियाँ" },
+          "severity": "MEDIUM"
+        }
+      ]
+    }
+  ]
+}

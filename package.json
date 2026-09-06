@@ -27,6 +27,7 @@
     "db:down": "docker compose -f infra/docker-compose.yml down",
     "smoke:models": "node scripts/smoke-models.js",
     "api:dev": "npm run dev -w apps/api",
+    "mobile:start": "npm run start -w apps/mobile",
     "seed:users": "node --env-file-if-exists=.env scripts/seed-users.js",
     "demo:cycle": "node scripts/dev-demo.js"
   },
