@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { ApiError, cacheInbox, myAssignments } from '../lib/api.js';
+import { ApiError, cacheInbox, hydrateInbox, myAssignments } from '../lib/api.js';
 import * as session from '../lib/session.js';
+import * as sync from '../lib/sync.js';
+import SyncStatus from '../components/SyncStatus.jsx';
 import { t } from '../lib/i18n.js';
 import { colour, s } from '../lib/styles.js';
 
@@ -30,6 +32,11 @@ export default function Inbox() {
   const [state, setState] = useState({ loading: true, rows: [], error: null });
 
   const load = useCallback(async () => {
+    // Disk first, so an inspector with no signal sees yesterday's inbox
+    // immediately rather than a spinner that resolves into an error.
+    const stored = await hydrateInbox();
+    if (stored) setState({ loading: false, rows: stored.assignments, error: null });
+
     try {
       const payload = await myAssignments('PENDING');
       cacheInbox(payload); // detail + form screens read from here, not the network
@@ -40,12 +47,21 @@ export default function Inbox() {
         await session.clear();
         return router.replace('/');
       }
-      setState((prev) => ({ ...prev, loading: false, error: t('inbox.loadFailed') }));
+      setState((prev) => ({
+        ...prev,
+        loading: false,
+        // A cached inbox is not an error state — it is the offline one.
+        error: stored ? t('inbox.offline') : t('inbox.loadFailed'),
+      }));
     }
   }, []);
 
   useEffect(() => {
     load();
+    // The one place the drain is started: the inbox is where an inspector lands
+    // after signing in and after submitting, so it is where connectivity is
+    // most likely to have come back.
+    sync.start();
   }, [load]);
 
   if (state.loading) return <ActivityIndicator style={{ marginTop: 48 }} />;
@@ -58,6 +74,14 @@ export default function Inbox() {
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => <Row item={item} />}
       refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
+      ListHeaderComponent={
+        <>
+          <SyncStatus />
+          {state.error && state.rows.length > 0 ? (
+            <Text style={s.muted}>{state.error}</Text>
+          ) : null}
+        </>
+      }
       ListEmptyComponent={<Text style={s.muted}>{state.error ?? t('inbox.empty')}</Text>}
     />
   );

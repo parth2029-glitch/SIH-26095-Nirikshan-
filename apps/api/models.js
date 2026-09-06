@@ -176,6 +176,10 @@ const inspectionReportSchema = new Schema(
   opts,
 );
 
+// One report per client-generated id. This is what makes §9's batch intake
+// idempotent — a retried outbox row collides instead of double-submitting.
+inspectionReportSchema.index({ clientId: 1 }, { unique: true });
+
 // ── EvidenceItem ─────────────────────────────────────────────────────────────
 const evidenceItemSchema = new Schema(
   {
@@ -306,7 +310,7 @@ class OverrideRequiredError extends Error {
   }
 }
 
-function requireOverride(schema) {
+function requireOverride(schema, { allowLocal } = {}) {
   for (const op of BLOCKED_QUERIES) {
     schema.pre(op, function () {
       throw new OverrideRequiredError(`${this.model.modelName}.${op}()`);
@@ -318,13 +322,22 @@ function requireOverride(schema) {
   // `$locals` by recordOverride() inside the transaction that writes it.
   schema.pre('save', function () {
     if (this.isNew || this.$locals.overrideId) return;
+    // A named, per-schema exemption rather than a general escape hatch: the
+    // caller has to have verified the precondition and stamped $locals for it,
+    // exactly as recordOverride() does.
+    if (allowLocal && this.$locals[allowLocal]) return;
     throw new OverrideRequiredError(`Modifying ${this.constructor.modelName}`);
   });
 }
 
-for (const schema of [assignmentSchema, findingSchema, inspectionReportSchema]) {
+for (const schema of [findingSchema, inspectionReportSchema]) {
   schema.plugin(requireOverride);
 }
+// PENDING → SUBMITTED is an inspector finishing their work, not an officer
+// weakening a record, and it is the only Assignment write §9 makes. The flag is
+// stamped in reports.js after that precondition is checked; every other edit
+// still needs a ledger entry.
+assignmentSchema.plugin(requireOverride, { allowLocal: 'inspectionSubmitted' });
 
 export const User = model('User', userSchema);
 export const Institute = model('Institute', instituteSchema);

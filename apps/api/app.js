@@ -4,6 +4,7 @@ import { authGate, fail, login, requireInstituteScope, requireRole } from './aut
 import { listMyAssignments } from './assignments.js';
 import { assignCycle, createCycle, revealCycle, verifyCycle } from './cycles.js';
 import { getOfficerRates, getVerifyChain, postOverride } from './overrides.js';
+import { postReports } from './reports.js';
 import { Institute } from './models.js';
 
 const repoFile = (path) => fileURLToPath(new URL(`../../${path}`, import.meta.url));
@@ -43,8 +44,10 @@ export function createApp() {
   app.get('/api/overrides/verify-chain', requireRole('DIVISION', 'AUDITOR'), getVerifyChain);
   app.get('/api/overrides/officer-rates', requireRole('DIVISION'), getOfficerRates);
 
-  // ── Inspector workflow (§7, PRD F2) ──────────────────────────────
+  // ── Inspector workflow (§7, §9, PRD F2) ────────────────────────────────────
   app.get('/api/assignments/mine', requireRole('INSPECTOR'), listMyAssignments);
+  // Takes an array — the offline outbox drains in batches (docs/API.md).
+  app.post('/api/reports', requireRole('INSPECTOR'), postReports);
 
   app.get(
     '/api/institutes/:id',

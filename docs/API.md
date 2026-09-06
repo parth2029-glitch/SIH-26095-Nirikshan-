@@ -321,8 +321,10 @@ enough to run an inspection with no connectivity.
 
 `INSPECTOR`. **Accepts an array** — the offline outbox drains in batches.
 
-An `Idempotency-Key` header is required. Replaying the same key returns the original result with
-`duplicate: true` and writes nothing.
+An `Idempotency-Key` header is required. Deduplication is keyed on each report's own `clientId`
+rather than on the header, so a batch the client re-cuts after a partial failure is still safe:
+a report whose `clientId` has been seen returns the original `reportId` with `duplicate: true` and
+writes nothing.
 
 ```json
 {
@@ -384,6 +386,12 @@ at login.
 
 Per-item failures return `status: "REJECTED"` with an `error` object on that item; the batch as a
 whole still returns `201`. The client retries only the rejected items.
+
+Rejection codes: `VALIDATION_FAILED`, `BAD_SIGNATURE` (the HMAC does not verify for the device that
+signed it — the one check that blocks rather than flags, because an unsigned report has no author),
+`NOT_FOUND`, `OUT_OF_SCOPE` (the assignment belongs to another inspector) and `ASSIGNMENT_CLOSED`
+(a *different* report was already accepted for it; a replay of the same `clientId` is a duplicate,
+not a rejection).
 
 ### `POST /api/reports/:id/evidence`
 

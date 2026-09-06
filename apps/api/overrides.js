@@ -21,6 +21,7 @@
  */
 import { createHash } from 'node:crypto';
 import mongoose from 'mongoose';
+import { canonicalJSON } from '@nirikshan/core/canonical';
 import { REASON_CODES, SEVERITIES } from '@nirikshan/core/constants';
 import { fail } from './auth.js';
 import {
@@ -51,26 +52,9 @@ const sha256 = (text) => createHash('sha256').update(text, 'utf8').digest('hex')
  */
 export const GENESIS_HASH = '0'.repeat(64);
 
-/**
- * Canonical JSON: keys sorted, no whitespace, one representation per value.
- *
- * `JSON.stringify` is not enough — it preserves insertion order, so two servers
- * building the same entry could hash it differently. `toJSON` is honoured first
- * so an ObjectId and its hex string, or a Date and its ISO string, canonicalise
- * identically; without that, an entry would hash differently on write than on
- * read-back from Mongo.
- */
-export function canonicalJSON(value) {
-  if (value === null || value === undefined) return 'null';
-  if (typeof value !== 'object') return JSON.stringify(value);
-  if (typeof value.toJSON === 'function') return canonicalJSON(value.toJSON());
-  if (Array.isArray(value)) return `[${value.map(canonicalJSON).join(',')}]`;
-  return `{${Object.keys(value)
-    .sort()
-    .filter((key) => value[key] !== undefined)
-    .map((key) => `${JSON.stringify(key)}:${canonicalJSON(value[key])}`)
-    .join(',')}}`;
-}
+// Re-exported so §6's callers and tests keep one import site; the definition
+// lives in core because §8's device signature hashes the same way.
+export { canonicalJSON };
 
 /**
  * The hashed material. `prevHash` and `entryHash` are excluded — the first is

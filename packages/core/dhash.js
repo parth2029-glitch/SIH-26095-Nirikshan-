@@ -56,3 +56,27 @@ export function bands(hash) {
   const hex = toHex(hash);
   return Array.from({ length: 8 }, (_, i) => `${i}:${hex.slice(i * 2, i * 2 + 2)}`);
 }
+
+/**
+ * RGBA pixels → the grayscale samples {@link dhash} expects (§8's mobile
+ * adapter). The server has no use for it — `sharp().greyscale()` does this in
+ * native code — but a phone has no canvas, so the conversion is JS either way
+ * and it belongs next to the hash whose input it produces.
+ *
+ * Rec. 601 luma, the same weighting `sharp().greyscale()` applies, so device
+ * and server disagree only about the resize kernel and not about grey.
+ *
+ * @param {ArrayLike<number>} rgba 4 bytes per pixel, row-major.
+ * @returns {Uint8Array} one sample per pixel.
+ */
+export function greyFromRgba(rgba) {
+  if (rgba?.length % 4 !== 0) {
+    throw new RangeError(`greyFromRgba() expects whole RGBA pixels, got ${rgba?.length} bytes`);
+  }
+  const grey = new Uint8Array(rgba.length / 4);
+  for (let i = 0; i < grey.length; i++) {
+    const p = i * 4;
+    grey[i] = Math.round(0.299 * rgba[p] + 0.587 * rgba[p + 1] + 0.114 * rgba[p + 2]);
+  }
+  return grey;
+}

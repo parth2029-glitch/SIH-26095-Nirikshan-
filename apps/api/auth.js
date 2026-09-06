@@ -39,8 +39,10 @@ export const hashPassword = (plaintext) => bcrypt.hash(plaintext, rounds());
  * Per-device HMAC key for §8's report signatures. Derived rather than stored:
  * the same (user, device) pair always yields the same key, so the server can
  * re-derive it at verification time and nothing extra needs persisting.
+ *
+ * Exported for §9's batch intake, which re-derives it to verify a signature.
  */
-function deviceHmacKey(userId, deviceId) {
+export function deviceHmacKey(userId, deviceId) {
   const value = process.env.DEVICE_HMAC_SECRET;
   if (!value) throw new Error('DEVICE_HMAC_SECRET is not set — copy .env.example to .env');
   return createHmac('sha256', value).update(`${userId}:${deviceId}`).digest('hex');

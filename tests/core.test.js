@@ -5,7 +5,10 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bands, dhash, fromHex, toHex } from '@nirikshan/core/dhash';
+import { createHash, createHmac } from 'node:crypto';
+import { bands, dhash, fromHex, greyFromRgba, toHex } from '@nirikshan/core/dhash';
+import { hmacSha256 } from '@nirikshan/core/hmac';
+import { canonicalJSON, reportSignaturePayload } from '@nirikshan/core/canonical';
 import { distance } from '@nirikshan/core/hamming';
 import { score } from '@nirikshan/core/trust';
 import { REASON_CODES, ROLES, TRUST_FACTORS } from '@nirikshan/core/constants';
@@ -111,4 +114,46 @@ test('constants: the shared vocabulary is intact', () => {
   assert.equal(ROLES.length, 6); // PRD §6
   assert.equal(Object.keys(TRUST_FACTORS).length, 9); // PRD F3 L1–L9
   assert.ok(REASON_CODES.INSPECTOR_UNAVAILABLE); // the code docs/API.md uses
+});
+
+test('dhash: RGBA collapses to Rec. 601 luma, one sample per pixel', () => {
+  // Pure red, green, blue, white — the coefficients are the whole point, so a
+  // transposed pair would show up here and nowhere else.
+  const rgba = Uint8Array.from([255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255]);
+  assert.deepEqual(Array.from(greyFromRgba(rgba)), [76, 150, 29, 255]);
+  // Alpha is ignored, not multiplied in: a transparent pixel is still a pixel.
+  assert.deepEqual(Array.from(greyFromRgba(Uint8Array.from([255, 255, 255, 0]))), [255]);
+  assert.throws(() => greyFromRgba(Uint8Array.from([1, 2, 3])), RangeError);
+});
+
+test('hmac: the handset construction agrees with node createHmac', async () => {
+  const sha256 = async (bytes) => new Uint8Array(createHash('sha256').update(bytes).digest());
+  const utf8 = (text) => new TextEncoder().encode(text);
+  const hex = (bytes) => Buffer.from(bytes).toString('hex');
+
+  // The device signs with a 64-hex-character key, so that length is the one
+  // that matters — but a key longer than the block takes a different branch.
+  for (const key of ['a'.repeat(64), 'k', 'x'.repeat(200)]) {
+    for (const message of ['', '{"a":1}', 'शौचालय']) {
+      assert.equal(
+        hex(await hmacSha256(sha256, utf8(key), utf8(message))),
+        createHmac('sha256', key).update(message, 'utf8').digest('hex'),
+        `key ${key.length}, message ${JSON.stringify(message)}`,
+      );
+    }
+  }
+});
+
+test('canonical: a report signs over its contents, never its signature', () => {
+  const report = { clientId: 'c1', answers: [{ questionId: 'q', value: 41 }], signature: 'old' };
+  // Signing has to be stable across a re-sign, or a client that stamps its
+  // signature before serialising would produce a value it cannot reproduce.
+  assert.equal(
+    canonicalJSON(reportSignaturePayload(report)),
+    canonicalJSON(reportSignaturePayload({ ...report, signature: 'different' })),
+  );
+  assert.equal(
+    canonicalJSON(reportSignaturePayload(report)),
+    '{"answers":[{"questionId":"q","value":41}],"clientId":"c1"}',
+  );
 });

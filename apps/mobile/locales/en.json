@@ -1,5 +1,8 @@
 {
-  "app": { "name": "Nirikshan", "language": "Language" },
+  "app": {
+    "name": "Nirikshan",
+    "language": "Language"
+  },
   "login": {
     "title": "Inspector sign-in",
     "email": "Email",
@@ -18,7 +21,11 @@
     "refresh": "Pull to refresh",
     "loadFailed": "Could not load assignments.",
     "signOut": "Sign out",
-    "allocation": { "RANDOM": "Random draw", "TARGETED": "Risk-targeted" }
+    "allocation": {
+      "RANDOM": "Random draw",
+      "TARGETED": "Risk-targeted"
+    },
+    "offline": "Offline — showing the last downloaded inbox."
   },
   "institute": {
     "title": "Institute",
@@ -36,13 +43,28 @@
     "noChecklist": "No checklist is published for this scheme.",
     "yes": "Yes",
     "no": "No",
-    "photoPending": "Camera capture arrives in §8",
     "answered": "{{done}} of {{total}} answered",
-    "save": "Save draft"
+    "save": "Save draft",
+    "takePhoto": "Take photo",
+    "retake": "Retake photo",
+    "shutter": "Capture",
+    "hashing": "Hashing…",
+    "cancel": "Cancel",
+    "photoHash": "SHA-256 {{hash}}…",
+    "photoMocked": "Warning: this location was reported as mocked.",
+    "submit": "Submit inspection",
+    "submitting": "Signing…",
+    "submitFailed": "Could not queue this inspection",
+    "noKey": "This device has no signing key. Sign out and sign in again.",
+    "queuedHint": "Submitted inspections are queued on this device and sent when a connection is available."
   },
   "scheme": {
     "HOSTEL": "Hostel",
     "SENIOR_HOME": "Senior home",
     "DEADDICTION_CENTRE": "De-addiction centre"
+  },
+  "sync": {
+    "queued": "{{n}} inspection(s) waiting to send — tap to retry",
+    "sending": "Sending {{n}} inspection(s)…"
   }
 }

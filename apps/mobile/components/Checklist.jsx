@@ -1,4 +1,5 @@
 import { Pressable, Text, TextInput, View } from 'react-native';
+import PhotoCapture from './PhotoCapture.jsx';
 import { localised, t } from '../lib/i18n.js';
 import { s } from '../lib/styles.js';
 
@@ -18,7 +19,7 @@ const Chip = ({ label, on, onPress }) => (
  * the renderer switches on `type` and the JSON decides everything else — adding
  * a scheme is a file in `apps/api/checklists/`, never a change here.
  */
-function Item({ item, value, onChange }) {
+function Item({ item, value, evidence, onChange, onCapture }) {
   const set = (next) => onChange(item.id, next);
 
   const control = {
@@ -51,9 +52,18 @@ function Item({ item, value, onChange }) {
         ))}
       </View>
     ),
-    // §8 replaces this with expo-camera. The prompt is already in the JSON so
-    // that wiring the camera is a swap here and nothing else.
-    photo: () => <Text style={s.muted}>{t('inspect.photoPending')}</Text>,
+    // The answer value is the evidence's clientId, so a photographed item
+    // counts as answered by the same rule as every other type.
+    photo: () => (
+      <PhotoCapture
+        item={item}
+        evidence={evidence}
+        onCaptured={(captured) => {
+          onCapture(captured);
+          set(captured.clientId);
+        }}
+      />
+    ),
   }[item.type];
 
   return (
@@ -65,12 +75,19 @@ function Item({ item, value, onChange }) {
 }
 
 /** JSON in, form out. `answers` is a flat `{ [itemId]: value }` map. */
-export default function Checklist({ checklist, answers, onChange }) {
+export default function Checklist({ checklist, answers, evidence = {}, onChange, onCapture }) {
   return checklist.sections.map((section) => (
     <View key={section.id} style={{ gap: 12 }}>
       <Text style={s.h2}>{localised(section.title)}</Text>
       {section.items.map((item) => (
-        <Item key={item.id} item={item} value={answers[item.id]} onChange={onChange} />
+        <Item
+          key={item.id}
+          item={item}
+          value={answers[item.id]}
+          evidence={evidence[item.id]}
+          onChange={onChange}
+          onCapture={onCapture}
+        />
       ))}
     </View>
   ));
