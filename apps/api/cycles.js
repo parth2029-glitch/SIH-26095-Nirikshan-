@@ -13,6 +13,7 @@
  *    is the browser's to compute.
  */
 import { createHash, randomBytes } from 'node:crypto';
+import mongoose from 'mongoose';
 import { ASSIGN_DEFAULTS, assign } from '@nirikshan/core/assign';
 import { fail } from './auth.js';
 import { Assignment, InspectionCycle, Inspector, Institute } from './models.js';
@@ -225,33 +226,56 @@ export async function assignCycle(req, res) {
 
   if (req.body?.dryRun) return res.json({ ...summary, created: false, dryRun: true });
 
+  const session = await mongoose.startSession();
   try {
-    // The unique (cycleId, instituteId) index is the concurrency guard: two
-    // simultaneous calls race here, and the loser gets E11000 rather than a
-    // second set of assignments.
-    // ponytail: no transaction, so a crash between these two writes leaves
-    // rows without their snapshot and /verify with nothing to publish. Wrap
-    // both in the session §6 introduces for the ledger, once a replica set is
-    // a hard requirement anyway.
-    await Assignment.insertMany(
-      result.assignments.map((a) => ({
-        cycleId: cycle._id,
-        instituteId: a.instituteId,
-        inspectorId: a.inspectorId,
-        allocationType: a.allocationType,
-        dueDate: cycle.periodEnd,
-      })),
-    );
+    // One transaction: the assignment rows and the input snapshot that lets a
+    // stranger replay them land together or not at all. Split, a crash between
+    // the two leaves a cycle of real assignments that nobody can verify — the
+    // one state F1 cannot tolerate, since an unverifiable draw is
+    // indistinguishable from a rigged one.
+    await session.withTransaction(async () => {
+      // The unique (cycleId, instituteId) index is the concurrency guard: two
+      // simultaneous calls race here, and the loser aborts on E11000 rather
+      // than writing a second set of assignments.
+      await Assignment.insertMany(
+        result.assignments.map((a) => ({
+          cycleId: cycle._id,
+          instituteId: a.instituteId,
+          inspectorId: a.inspectorId,
+          allocationType: a.allocationType,
+          dueDate: cycle.periodEnd,
+        })),
+        { session },
+      );
+
+      // `updateOne`, not `cycle.save()`: withTransaction re-runs this callback
+      // on a write conflict, and a Mongoose document that has already saved
+      // once has no modified paths left — the retry would silently no-op and
+      // commit the rows without their snapshot, recreating the very failure
+      // this transaction exists to remove.
+      await InspectionCycle.updateOne(
+        { _id: cycle._id },
+        {
+          $set: {
+            inputs,
+            deferred: result.deferred,
+            constraintRelaxations: result.constraintRelaxations,
+            status: 'ASSIGNED',
+          },
+        },
+        { session },
+      );
+    });
   } catch (err) {
     if (err.code !== 11000 && err.cause?.code !== 11000) throw err;
-    return res.json(await storedSummary(cycle, false));
+    // Re-read before summarising: this caller loaded the cycle before the
+    // winner committed, so its in-memory copy still carries an empty
+    // `deferred[]` — an officer's reschedule queue reported as nothing to do.
+    const winner = (await InspectionCycle.findById(cycle._id)) ?? cycle;
+    return res.json(await storedSummary(winner, false));
+  } finally {
+    await session.endSession();
   }
-
-  cycle.inputs = inputs;
-  cycle.deferred = result.deferred;
-  cycle.constraintRelaxations = result.constraintRelaxations;
-  cycle.status = 'ASSIGNED';
-  await cycle.save();
 
   return res.json(summary);
 }

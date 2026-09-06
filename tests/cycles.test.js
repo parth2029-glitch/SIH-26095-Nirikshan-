@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { assign } from '@nirikshan/core/assign';
 import { createApp } from '../apps/api/app.js';
 import { hashPassword } from '../apps/api/auth.js';
@@ -55,7 +55,12 @@ before(async () => {
   process.env.DEVICE_HMAC_SECRET = 'test-device-secret';
   process.env.BCRYPT_ROUNDS = '4';
 
-  memoryServer = await MongoMemoryServer.create();
+  // A replica set, not a standalone: the assign endpoint writes the rows and
+  // their input snapshot in one transaction, and Mongo only offers those on a
+  // replica set. infra/docker-compose.yml runs a single-node rs0 to match.
+  memoryServer = await MongoMemoryReplSet.create({
+    replSet: { count: 1, storageEngine: 'wiredTiger' },
+  });
   await mongoose.connect(memoryServer.getUri('nirikshan-cycles-test'));
 
   // 40 institutes across 5 districts, 10 inspectors. Enough that C1–C4 bind
@@ -187,6 +192,46 @@ test('assigning is idempotent — a second call writes nothing', async () => {
   );
   const created = await Promise.all(results.map(async (r) => (await r.json()).created));
   assert.equal(created.filter(Boolean).length, 1, 'exactly one caller created the draw');
+});
+
+test('the rows and their snapshot are one transaction', async () => {
+  const cycle = await newCycle();
+
+  // Fail the snapshot write and nothing else. Without a transaction the
+  // assignments would already be committed, leaving a cycle of real pairings
+  // that /verify cannot publish and nobody can replay — which is why this test
+  // exists rather than trusting that `{ session }` is on both writes.
+  const storeSnapshot = InspectionCycle.updateOne;
+  const logError = console.error;
+  InspectionCycle.updateOne = () => Promise.reject(new Error('snapshot write failed'));
+  console.error = () => {}; // the 500 is expected; its stack trace is not output
+  try {
+    const res = await call(`/api/cycles/${cycle.id}/assign`, {
+      token: divisionToken,
+      method: 'POST',
+    });
+    assert.equal(res.status, 500);
+  } finally {
+    InspectionCycle.updateOne = storeSnapshot;
+    console.error = logError;
+  }
+
+  assert.equal(
+    await Assignment.countDocuments({ cycleId: cycle.id }),
+    0,
+    'the assignments rolled back with the snapshot',
+  );
+  const stored = await InspectionCycle.findById(cycle.id);
+  assert.equal(stored.inputs, null);
+  assert.equal(stored.status, 'OPEN', 'and the cycle is still drawable');
+
+  // Still drawable, and it draws the same cycle the seed always implied.
+  const retry = await json(
+    await call(`/api/cycles/${cycle.id}/assign`, { token: divisionToken, method: 'POST' }),
+  );
+  assert.equal(retry.status, 200);
+  assert.equal(retry.body.created, true);
+  assert.ok(retry.body.assignmentCount > 0);
 });
 
 test('reveal refuses while the cycle is still open, twice over', async () => {

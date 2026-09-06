@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { authGate, fail, login, requireInstituteScope, requireRole } from './auth.js';
 import { assignCycle, createCycle, revealCycle, verifyCycle } from './cycles.js';
+import { getOfficerRates, getVerifyChain, postOverride } from './overrides.js';
 import { Institute } from './models.js';
 
 const repoFile = (path) => fileURLToPath(new URL(`../../${path}`, import.meta.url));
@@ -33,11 +34,13 @@ export function createApp() {
   // Public by design — PUBLIC_PATHS in auth.js lets this one through the gate.
   app.get('/api/cycles/:id/verify', verifyCycle);
 
-  // §6 owns the handler. Mounted now so the role guard is real and testable —
-  // an INSPECTOR token must get 403 here, not 404.
-  app.post('/api/overrides', requireRole('DISTRICT', 'DIVISION'), (req, res) =>
-    fail(res, 501, 'INTERNAL', 'The override ledger lands in §6.'),
-  );
+  // ── Override ledger (§6, PRD F4) ───────────────────────────────────────────
+  // The only door: direct model writes are refused by the requireOverride
+  // plugin in models.js, so weakening the system has to pass this role guard.
+  app.post('/api/overrides', requireRole('DISTRICT', 'DIVISION'), postOverride);
+  // AUDITOR reads the chain but cannot write to it — the point of an auditor.
+  app.get('/api/overrides/verify-chain', requireRole('DIVISION', 'AUDITOR'), getVerifyChain);
+  app.get('/api/overrides/officer-rates', requireRole('DIVISION'), getOfficerRates);
 
   app.get(
     '/api/institutes/:id',

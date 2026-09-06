@@ -162,6 +162,13 @@ const inspectionReportSchema = new Schema(
       },
     ],
     answers: [{ _id: false, questionId: String, value: Schema.Types.Mixed, note: String }],
+    // Moved only by a REPORT_REOPENED override event (§6) — a reopened report
+    // is a weakening of a closed record, so it goes through the ledger.
+    status: {
+      type: String,
+      enum: ['SUBMITTED', 'UNDER_REVIEW', 'ACCEPTED', 'REOPENED'],
+      default: 'SUBMITTED',
+    },
     trustScore: { type: Number, default: null },
     trustFactors: { type: [Schema.Types.Mixed], default: [] },
     signature: String, // HMAC-SHA256 from the device key issued at login (§8)
@@ -257,6 +264,68 @@ const occupancySnapshotSchema = new Schema(
   opts,
 );
 
+// ── MerkleRoot — nightly anchor over the ledger (§6, PRD F4) ─────────────────
+// Its own collection so an anchor cannot be edited by the same write path that
+// edits the ledger. Published nightly; an old root pins every entry that
+// existed when it was taken, so a later rewrite of history contradicts a value
+// that was already public.
+const merkleRootSchema = new Schema(
+  {
+    root: { type: String, required: true },
+    fromSeq: { type: Number, required: true },
+    toSeq: { type: Number, required: true },
+    entryCount: { type: Number, required: true },
+    headHash: { type: String, required: true },
+    at: { type: Date, default: Date.now },
+  },
+  opts,
+);
+merkleRootSchema.index({ toSeq: 1 });
+
+// ── requireOverride — the mutation lockdown (§6, PRD F4) ─────────────────────
+// Query middleware refuses outright: `recordOverride()` mutates through a
+// loaded document, never through a query, so there is no legitimate caller to
+// let past. `bulkWrite` is absent from this list because Mongoose cannot hook
+// it at all — ESLint bans it instead (eslint.config.js).
+const BLOCKED_QUERIES = [
+  'updateOne',
+  'updateMany',
+  'findOneAndUpdate',
+  'replaceOne',
+  'findOneAndReplace',
+  'deleteOne',
+  'deleteMany',
+  'findOneAndDelete',
+];
+
+class OverrideRequiredError extends Error {
+  constructor(what) {
+    super(`${what} weakens a monitored record — route it through recordOverride() (§6).`);
+    this.name = 'OverrideRequiredError';
+    this.code = 'OVERRIDE_REQUIRED';
+  }
+}
+
+function requireOverride(schema) {
+  for (const op of BLOCKED_QUERIES) {
+    schema.pre(op, function () {
+      throw new OverrideRequiredError(`${this.model.modelName}.${op}()`);
+    });
+  }
+
+  // Creation is not a weakening — an inspection that never existed cannot be
+  // suppressed. Every later edit needs a ledger entry to point at, stamped on
+  // `$locals` by recordOverride() inside the transaction that writes it.
+  schema.pre('save', function () {
+    if (this.isNew || this.$locals.overrideId) return;
+    throw new OverrideRequiredError(`Modifying ${this.constructor.modelName}`);
+  });
+}
+
+for (const schema of [assignmentSchema, findingSchema, inspectionReportSchema]) {
+  schema.plugin(requireOverride);
+}
+
 export const User = model('User', userSchema);
 export const Institute = model('Institute', instituteSchema);
 export const Inspector = model('Inspector', inspectorSchema);
@@ -267,6 +336,7 @@ export const EvidenceItem = model('EvidenceItem', evidenceItemSchema);
 export const Finding = model('Finding', findingSchema);
 export const OverrideEvent = model('OverrideEvent', overrideEventSchema);
 export const OccupancySnapshot = model('OccupancySnapshot', occupancySnapshotSchema);
+export const MerkleRoot = model('MerkleRoot', merkleRootSchema);
 
 export const models = {
   User,
@@ -279,4 +349,5 @@ export const models = {
   Finding,
   OverrideEvent,
   OccupancySnapshot,
+  MerkleRoot,
 };

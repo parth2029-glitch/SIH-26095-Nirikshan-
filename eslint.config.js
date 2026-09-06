@@ -28,6 +28,18 @@ export default [
       // Express recognises an error handler by its four-arg signature, so
       // `next` must be declared even when unused.
       'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+
+      // §6 — bulkWrite is the one mutation path Mongoose cannot hook, so the
+      // requireOverride plugin cannot refuse it. Banned here instead, because a
+      // silent bypass of the ledger is the failure F4 exists to prevent.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression > MemberExpression[property.name='bulkWrite']",
+          message:
+            'bulkWrite bypasses the requireOverride hooks (§6) — use recordOverride(), or insertMany for creates.',
+        },
+      ],
     },
   },
 

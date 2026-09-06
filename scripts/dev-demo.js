@@ -13,7 +13,7 @@
  * seen working before §12 or §13 land.
  */
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { createApp } from '../apps/api/app.js';
 import { hashPassword } from '../apps/api/auth.js';
 import { Assignment, Inspector, Institute, User } from '../apps/api/models.js';
@@ -29,7 +29,11 @@ process.env.JWT_SECRET ??= 'dev-demo-secret-not-for-any-real-deployment';
 process.env.DEVICE_HMAC_SECRET ??= 'dev-demo-device-secret';
 process.env.BCRYPT_ROUNDS ??= '4';
 
-const memoryServer = await MongoMemoryServer.create();
+// A replica set: the assign endpoint runs in a transaction, and Mongo only
+// offers those on one. Costs a few seconds of startup, nothing else.
+const memoryServer = await MongoMemoryReplSet.create({
+  replSet: { count: 1, storageEngine: 'wiredTiger' },
+});
 await mongoose.connect(memoryServer.getUri('nirikshan-demo'));
 
 // 40 institutes over 5 districts and 10 inspectors: enough that C1–C4 actually

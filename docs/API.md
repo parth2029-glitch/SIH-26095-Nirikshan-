@@ -499,6 +499,16 @@ blocked at the Mongoose layer (§6), so this is the only door.
 
 `eventType` is one of the 8 in PRD F4. `justification` is required, minimum 20 characters.
 
+`targetType` is **derived from `eventType`**, not read from the request — a client that could
+assert it could point `FINDING_DISMISSED` at an assignment. Send it or omit it; the server ignores
+it either way and echoes the type it used.
+
+`payload` carries only what the event cannot know by itself, and is ignored where there is nothing
+to choose: `ASSIGNMENT_REASSIGNED` needs `inspectorId`, `FINDING_DOWNGRADED` needs a strictly lower
+`severity`, `SLA_EXTENDED` needs a strictly later `slaDueAt`. The other five events take none.
+
+`RECORDING_ENABLED` writes the ledger entry and mutates nothing until §23 adds `VCSession`.
+
 `201`
 
 ```json
@@ -526,6 +536,10 @@ The ledger write and the target mutation are one Mongo transaction — both land
 ### `GET /api/overrides/verify-chain`
 
 `DIVISION`, `AUDITOR`. Walks the chain from genesis and reports the first break.
+
+The chain starts at a fixed genesis hash of 64 zeros rather than a genesis row: every field on an
+entry is required — actor, target, reason code, justification — and a genesis row could honestly
+supply none of them.
 
 `200` — intact:
 
@@ -558,6 +572,11 @@ The ledger write and the target mutation are one Mongo transaction — both land
 ### `GET /api/overrides/officer-rates`
 
 `DIVISION`. Per-officer override rate against the peer mean, flagging anyone above 2σ.
+
+`decisionCount` is the denominator: inspections that passed through the officer's jurisdiction in
+the window — every assignment in their district for a `DISTRICT` officer, every assignment for a
+`DIVISION` one. Officers with nothing to decide are excluded from the peer statistics, so an idle
+district cannot drag the mean down and flag everybody else.
 
 Query: `?from=2026-01-01&to=2026-10-08&eventType=ALL`
 
