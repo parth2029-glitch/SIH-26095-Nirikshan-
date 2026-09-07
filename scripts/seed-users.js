@@ -4,8 +4,9 @@
  *   npm run seed:users                 # spins up an ephemeral Mongo
  *   MONGODB_URI=... npm run seed:users # or point at a real one
  *
- * Idempotent — re-running upserts the same six accounts. §12's seed script
- * replaces the Inspector and Institute rows this creates; the users survive.
+ * Idempotent — re-running upserts the same six accounts, and touches nothing
+ * else. `npm run seed` (§12) is the other one: a whole demo database, and it
+ * drops what is there first. Use this against a database you want to keep.
  */
 import { connect, disconnect } from '../apps/api/db.js';
 import { Institute, Inspector, User } from '../apps/api/models.js';

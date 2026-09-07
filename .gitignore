@@ -26,6 +26,9 @@ apps/dashboard/dist/
 # evidence & fixtures uploads (binaries, never committed)
 fixtures/uploads/
 fixtures/tmp/
+# synthetic stand-ins the seed generates when the pool is empty (§12). Real
+# licence-clear photographs dropped in here are committed — these are not.
+fixtures/evidence/fixture-*.jpg
 
 # logs & caches
 *.log

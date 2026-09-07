@@ -18,7 +18,7 @@ export default [
 
   // Node code: API, scripts, tests, config.
   {
-    files: ['apps/api/**/*.js', 'scripts/**/*.js', 'tests/**/*.js', '*.config.js'],
+    files: ['apps/api/**/*.js', 'scripts/**/*.js', 'tests/**/*.js', '**/*.config.js'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',

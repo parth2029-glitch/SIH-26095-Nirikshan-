@@ -1,0 +1,43 @@
+@import 'tailwindcss';
+@import 'leaflet/dist/leaflet.css';
+
+/*
+ * The same tokens `public/verify.html` already uses, so the authenticated app
+ * and the public verification page are visibly one system. Defined here rather
+ * than as a Tailwind theme extension because verify.html has no build step and
+ * has to keep working without one.
+ */
+@theme {
+  --color-ink: #16181d;
+  --color-dim: #5b6472;
+  --color-line: #d7dbe2;
+  --color-page: #f6f7f9;
+  --color-card: #ffffff;
+  --color-ok: #0a7a41;
+  --color-bad: #b3261e;
+  --color-warn: #a15c00;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: var(--color-page);
+  color: var(--color-ink);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+
+/*
+ * Only the ground colour. No height here: unlayered CSS beats Tailwind's
+ * `@layer utilities`, so a `height: 100%` on this selector silently wins over
+ * the `h-[70vh]` on the element and collapses the map to nothing.
+ */
+.leaflet-container {
+  background: var(--color-page);
+}

@@ -59,6 +59,10 @@ Every non-2xx response uses this shape.
 | POST | `/api/overrides` | DISTRICT, DIVISION | §6 |
 | GET | `/api/overrides/verify-chain` | DIVISION, AUDITOR | §6 |
 | GET | `/api/overrides/officer-rates` | DIVISION | §6 |
+| GET | `/api/dashboard/cycles` | DISTRICT, DIVISION, AUDITOR, INSTITUTE (scoped) | §13 |
+| GET | `/api/dashboard/findings` | DISTRICT, DIVISION, AUDITOR, INSTITUTE (scoped) | §13 |
+| GET | `/api/dashboard/institutes` | DISTRICT, DIVISION, AUDITOR, INSTITUTE (scoped) | §13 |
+| GET | `/api/reports/:id` | DISTRICT, DIVISION, AUDITOR, INSTITUTE (scoped) | §13 |
 | GET | `/api/dashboard/velocity` | DIVISION | §14 |
 | GET | `/api/dashboard/scorecard` | DIVISION | §14 |
 | GET | `/api/institutes/:id` | DISTRICT, DIVISION, AUDITOR, INSTITUTE (own) | §2 |
@@ -652,6 +656,168 @@ Query: `?from=2026-01-01&to=2026-10-08&eventType=ALL`
 ---
 
 ## Dashboard (F6)
+
+**Scope.** The four §13 reads below are narrowed by the caller's own token, never
+by a query parameter: `DIVISION` and `AUDITOR` see the whole portfolio,
+`DISTRICT` sees the institutes in its `homeDistrict`, `INSTITUTE` sees only its
+own record. The filter is applied inside the query, so an out-of-scope row is
+never read — asking for another district returns that district's absence, not
+its data, and a report outside the caller's jurisdiction is `403 OUT_OF_SCOPE`.
+
+### `GET /api/dashboard/cycles`
+
+The live cycle panel. Newest twelve cycles, counted within scope. `overdue` is
+derived (`PENDING` past `dueDate`), never stored.
+
+`200`
+
+```json
+{
+  "cycles": [
+    {
+      "id": "66f0a1b2c3d4e5f600000201",
+      "periodStart": "2026-09-01T00:00:00.000Z",
+      "periodEnd": "2026-10-01T00:00:00.000Z",
+      "status": "ASSIGNED",
+      "seedRevealed": false,
+      "commitmentHash": "2b8a0d65d2…8f7be4d",
+      "commitmentPublishedAt": "2026-09-01T04:30:00.000Z",
+      "issued": 200,
+      "completed": 96,
+      "overdue": 0,
+      "cancelled": 0,
+      "deferred": 3,
+      "constraintRelaxations": [{ "constraint": "C3", "steps": 1, "affectedInstitutes": 4 }]
+    }
+  ]
+}
+```
+
+### `GET /api/dashboard/findings`
+
+The action queue. Query: `?status=OPEN|ACTIONED|CLOSED|ESCALATED|ALL` (default
+`OPEN`), `?limit=100` (max 500). Sorted by SLA date, soonest first.
+
+`200`
+
+```json
+{
+  "findings": [
+    {
+      "id": "66f0a1b2c3d4e5f600000401",
+      "reportId": "66f0a1b2c3d4e5f600000301",
+      "severity": "CRITICAL",
+      "category": "sanitation",
+      "description": "fire-extinguisher: Not available on the day.",
+      "status": "OPEN",
+      "slaDueAt": "2026-02-15T00:00:00.000Z",
+      "slaState": "BREACHED",
+      "daysOpen": 337,
+      "owner": { "id": "66f0a1b2c3d4e5f600000102", "name": "D. Patil" },
+      "institute": {
+        "id": "66f0a1b2c3d4e5f600000011",
+        "name": "Girna Senior Citizens Home",
+        "district": "Pune",
+        "riskSignature": "CLEAN"
+      }
+    }
+  ]
+}
+```
+
+`slaState` is `BREACHED` past the date, `DUE_SOON` within three days of it,
+`ON_TIME` otherwise, `NONE` when the finding carries no SLA.
+
+### `GET /api/dashboard/institutes`
+
+The risk map. Points, not records — the full institute is `GET /api/institutes/:id`.
+
+`200`
+
+```json
+{
+  "institutes": [
+    {
+      "id": "66f0a1b2c3d4e5f600000011",
+      "name": "Wardha Senior Citizens Home",
+      "district": "Nagpur",
+      "schemeType": "SENIOR_HOME",
+      "coordinates": [79.0882, 21.1458],
+      "riskSignature": "EVIDENCE_REUSE",
+      "riskScore": 78,
+      "reportedCapacity": 120,
+      "reportedOccupancy": 98
+    }
+  ]
+}
+```
+
+### `GET /api/reports/:id`
+
+The review view. Everything except the trust score, which stays on
+`GET /api/reports/:id/trust` because it costs a corpus scan.
+
+`200`
+
+```json
+{
+  "id": "66f0a1b2c3d4e5f600000301",
+  "submittedAt": "2026-09-03T05:00:00.000Z",
+  "capturedOffline": true,
+  "status": "ACCEPTED",
+  "signatureValid": true,
+  "deviceSignals": { "deviceId": "seed-device-07", "platform": "android", "rooted": false },
+  "answers": [{ "questionId": "headcount", "value": 41, "note": "Sanctioned capacity 96." }],
+  "assignment": {
+    "id": "66f0a1b2c3d4e5f600000201",
+    "allocationType": "TARGETED",
+    "dueDate": "2026-10-01T00:00:00.000Z",
+    "status": "SUBMITTED",
+    "inspectorId": "66f0a1b2c3d4e5f600000021"
+  },
+  "cycle": {
+    "id": "66f0a1b2c3d4e5f600000201",
+    "periodStart": "2026-09-01T00:00:00.000Z",
+    "periodEnd": "2026-10-01T00:00:00.000Z",
+    "status": "ASSIGNED",
+    "commitmentHash": "2b8a0d65d2…8f7be4d"
+  },
+  "institute": {
+    "id": "66f0a1b2c3d4e5f600000011",
+    "name": "Wardha Senior Citizens Home",
+    "district": "Nagpur",
+    "schemeType": "SENIOR_HOME",
+    "coordinates": [79.0882, 21.1458],
+    "riskSignature": "EVIDENCE_REUSE",
+    "reportedCapacity": 120,
+    "reportedOccupancy": 98
+  },
+  "evidence": [
+    {
+      "id": "66f0a1b2c3d4e5f600000501",
+      "thumbnailUrl": "/api/evidence/66f0a1b2c3d4e5f600000501/thumbnail",
+      "sha256": "9f2c…",
+      "dHash": "f0e1d2c3b4a59687",
+      "capturedAt": "2026-09-03T03:00:00.000Z",
+      "location": { "type": "Point", "coordinates": [79.0883, 21.1457], "mocked": false },
+      "flags": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "66f0a1b2c3d4e5f600000401",
+      "severity": "HIGH",
+      "category": "occupancy",
+      "description": "register-current: Not available on the day.",
+      "status": "OPEN",
+      "slaDueAt": "2026-09-18T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+`403 OUT_OF_SCOPE` when the report's institute is outside the caller's
+jurisdiction.
 
 ### `GET /api/dashboard/velocity`
 

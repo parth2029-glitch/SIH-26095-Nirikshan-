@@ -6,10 +6,14 @@ import { assignCycle, createCycle, revealCycle, verifyCycle } from './cycles.js'
 import { getOfficerRates, getVerifyChain, postOverride } from './overrides.js';
 import { postReports } from './reports.js';
 import { getThumbnail, postEvidence } from './evidence.js';
+import { getCycles, getFindings, getInstitutes, getReport } from './dashboard.js';
 import { getTrust } from './trust.js';
 import { Institute } from './models.js';
 
 const repoFile = (path) => fileURLToPath(new URL(`../../${path}`, import.meta.url));
+
+/** Roles that read a dashboard at all. What each one *sees* is `scopeOf()`'s job. */
+const OFFICE_ROLES = ['DISTRICT', 'DIVISION', 'AUDITOR', 'INSTITUTE'];
 
 /** Built as a factory so tests can listen on an ephemeral port (§2, §15). */
 export function createApp() {
@@ -62,6 +66,18 @@ export function createApp() {
     '/api/evidence/:id/thumbnail',
     requireRole('DISTRICT', 'DIVISION', 'AUDITOR'),
     getThumbnail,
+  );
+
+  // ── Dashboard reads (§13, PRD F6) ──────────────────────────────────────────
+  // Scope is enforced inside each handler, against the token's own claims —
+  // `requireRole` says who may ask, `scopeOf()` says what they get back.
+  app.get('/api/dashboard/cycles', requireRole(...OFFICE_ROLES), getCycles);
+  app.get('/api/dashboard/findings', requireRole(...OFFICE_ROLES), getFindings);
+  app.get('/api/dashboard/institutes', requireRole(...OFFICE_ROLES), getInstitutes);
+  app.get(
+    '/api/reports/:id',
+    requireRole('DISTRICT', 'DIVISION', 'AUDITOR', 'INSTITUTE'),
+    getReport,
   );
 
   app.get(

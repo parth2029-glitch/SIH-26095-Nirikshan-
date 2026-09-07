@@ -73,6 +73,10 @@ export async function login(req, res) {
     role: user.role,
     instituteId: user.instituteId?.toString() ?? null,
     inspectorId: user.inspectorId?.toString() ?? null,
+    // §13 narrows a DISTRICT token to its own district. In the claim rather than
+    // read per request for the same reason instituteId is: a scope check that
+    // costs a database round trip is a scope check somebody will skip.
+    homeDistrict: user.homeDistrict ?? null,
   };
   const token = jwt.sign(claims, secret(), { expiresIn: process.env.JWT_EXPIRES_IN || '12h' });
 
