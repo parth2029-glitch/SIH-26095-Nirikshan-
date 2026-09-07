@@ -32,6 +32,9 @@ let pune;
 let nagpur;
 let puneReport;
 let nagpurReport;
+// Minted up front so the findings can name their owner at creation: §6's plugin
+// refuses a later updateMany, which is the whole point of it.
+const districtOfficerId = new mongoose.Types.ObjectId();
 
 const call = (path, token) =>
   fetch(base + path, { headers: token ? { authorization: `Bearer ${token}` } : {} });
@@ -77,6 +80,12 @@ before(async () => {
     commitmentHash: 'a'.repeat(64),
     seed: 'b'.repeat(64),
     status: 'ASSIGNED',
+    // One deferral per district, so the log has something to leak if scoping
+    // is applied to the response rather than to the read.
+    deferred: [
+      { instituteId: String(pune._id), reason: 'No inspector satisfied C2 and C4.' },
+      { instituteId: String(nagpur._id), reason: 'No inspector satisfied C1.' },
+    ],
   });
 
   const [puneAssignment, nagpurAssignment] = await Assignment.create([
@@ -117,18 +126,21 @@ before(async () => {
       severity: 'HIGH',
       category: 'sanitation',
       slaDueAt: new Date('2026-02-15'),
+      ownerId: districtOfficerId,
     },
     {
       reportId: nagpurReport._id,
       severity: 'HIGH',
       category: 'sanitation',
       slaDueAt: new Date('2026-02-15'),
+      ownerId: districtOfficerId,
     },
   ]);
 
   const passwordHash = await hashPassword(PASSWORD);
   await User.create([
     {
+      _id: districtOfficerId,
       email: 'district@example.test',
       name: 'D. Patil',
       role: 'DISTRICT',
@@ -226,6 +238,47 @@ test('an INSPECTOR token reaches no dashboard route at all', async () => {
     const res = await call(path, token);
     assert.equal(res.status, 403, `${path} should be forbidden to an inspector`);
   }
+});
+
+test('unactioned flags are grouped and counted by the server, not by a capped page', async () => {
+  // Both findings are owned by the Pune officer and their 2026-02-15 SLA date
+  // is long past.
+  const division = await (
+    await call('/api/dashboard/unactioned', await login('division@example.test'))
+  ).json();
+  assert.equal(division.total, 2);
+  assert.deepEqual(
+    division.officers.map((o) => [o.name, o.breached, o.severe]),
+    [['D. Patil', 2, 2]],
+  );
+
+  // Scope narrows the count, not just the list: the Nagpur finding is the same
+  // officer's row on the division's screen and absent from the district's.
+  const district = await (
+    await call('/api/dashboard/unactioned', await login('district@example.test'))
+  ).json();
+  assert.equal(district.total, 1);
+  assert.equal(district.officers[0].breached, 1);
+});
+
+test('the deferral log is scoped, not just its count', async () => {
+  const district = await (
+    await call('/api/dashboard/cycles', await login('district@example.test'))
+  ).json();
+  assert.equal(district.cycles[0].deferred, 1);
+  assert.deepEqual(
+    district.cycles[0].deferrals.map((d) => d.name),
+    ['Pune Hostel'],
+  );
+
+  const division = await (
+    await call('/api/dashboard/cycles', await login('division@example.test'))
+  ).json();
+  assert.equal(division.cycles[0].deferred, 2);
+  assert.deepEqual(
+    division.cycles[0].deferrals.map((d) => d.reason),
+    ['No inspector satisfied C2 and C4.', 'No inspector satisfied C1.'],
+  );
 });
 
 test('overdue is derived from the clock, not from a stored status', async () => {

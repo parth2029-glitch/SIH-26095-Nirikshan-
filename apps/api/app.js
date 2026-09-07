@@ -6,7 +6,7 @@ import { assignCycle, createCycle, revealCycle, verifyCycle } from './cycles.js'
 import { getOfficerRates, getVerifyChain, postOverride } from './overrides.js';
 import { postReports } from './reports.js';
 import { getThumbnail, postEvidence } from './evidence.js';
-import { getCycles, getFindings, getInstitutes, getReport } from './dashboard.js';
+import { getCycles, getFindings, getInstitutes, getReport, getUnactioned } from './dashboard.js';
 import { getTrust } from './trust.js';
 import { Institute } from './models.js';
 
@@ -73,6 +73,7 @@ export function createApp() {
   // `requireRole` says who may ask, `scopeOf()` says what they get back.
   app.get('/api/dashboard/cycles', requireRole(...OFFICE_ROLES), getCycles);
   app.get('/api/dashboard/findings', requireRole(...OFFICE_ROLES), getFindings);
+  app.get('/api/dashboard/unactioned', requireRole(...OFFICE_ROLES), getUnactioned);
   app.get('/api/dashboard/institutes', requireRole(...OFFICE_ROLES), getInstitutes);
   app.get(
     '/api/reports/:id',

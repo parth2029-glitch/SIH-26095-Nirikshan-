@@ -61,6 +61,7 @@ Every non-2xx response uses this shape.
 | GET | `/api/overrides/officer-rates` | DIVISION | §6 |
 | GET | `/api/dashboard/cycles` | DISTRICT, DIVISION, AUDITOR, INSTITUTE (scoped) | §13 |
 | GET | `/api/dashboard/findings` | DISTRICT, DIVISION, AUDITOR, INSTITUTE (scoped) | §13 |
+| GET | `/api/dashboard/unactioned` | DISTRICT, DIVISION, AUDITOR, INSTITUTE (scoped) | §14 |
 | GET | `/api/dashboard/institutes` | DISTRICT, DIVISION, AUDITOR, INSTITUTE (scoped) | §13 |
 | GET | `/api/reports/:id` | DISTRICT, DIVISION, AUDITOR, INSTITUTE (scoped) | §13 |
 | GET | `/api/dashboard/velocity` | DIVISION | §14 |
@@ -669,6 +670,11 @@ its data, and a report outside the caller's jurisdiction is `403 OUT_OF_SCOPE`.
 The live cycle panel. Newest twelve cycles, counted within scope. `overdue` is
 derived (`PENDING` past `dueDate`), never stored.
 
+`deferrals` is the engine's deferral log (§4): institutes no inspector could take under C1–C4,
+with the binding constraint named. It is scoped like every other read here, so `deferred` is the
+count *this token* may see — a district officer is not told how many institutes a neighbouring
+district could not place.
+
 `200`
 
 ```json
@@ -686,7 +692,15 @@ derived (`PENDING` past `dueDate`), never stored.
       "completed": 96,
       "overdue": 0,
       "cancelled": 0,
-      "deferred": 3,
+      "deferred": 1,
+      "deferrals": [
+        {
+          "instituteId": "66f0a1b2c3d4e5f600000042",
+          "name": "Ambegaon Girls Hostel",
+          "district": "Pune",
+          "reason": "No inspector satisfied C2 and C4 after relaxing C3 by one step."
+        }
+      ],
       "constraintRelaxations": [{ "constraint": "C3", "steps": 1, "affectedInstitutes": 4 }]
     }
   ]
@@ -727,6 +741,31 @@ The action queue. Query: `?status=OPEN|ACTIONED|CLOSED|ESCALATED|ALL` (default
 
 `slaState` is `BREACHED` past the date, `DUE_SOON` within three days of it,
 `ON_TIME` otherwise, `NONE` when the finding carries no SLA.
+
+### `GET /api/dashboard/unactioned`
+
+§14's unactioned-flag panel: open findings already past `slaDueAt`, counted per owning officer
+and scoped like every other read here. Counts, not rows — `/api/dashboard/findings` caps at 500,
+and counting a capped page would understate the backlog exactly when it has grown past the cap.
+A `null` `ownerId` is the unassigned bucket, listed like any other.
+
+`200`
+
+```json
+{
+  "total": 812,
+  "officers": [
+    {
+      "ownerId": "66f0a1b2c3d4e5f600000002",
+      "name": "R. Deshmukh",
+      "district": "Pune",
+      "breached": 84,
+      "severe": 68,
+      "oldestDaysOpen": 338
+    }
+  ]
+}
+```
 
 ### `GET /api/dashboard/institutes`
 

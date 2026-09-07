@@ -52,6 +52,37 @@ const instituteMatch = (scope) => (scope ? { instituteId: { $in: scope.map(toId)
 
 const toId = (id) => new mongoose.Types.ObjectId(String(id));
 
+/**
+ * The two joins any finding read needs before it can be scoped: a finding knows
+ * its report, a report knows its assignment, and only the assignment knows the
+ * institute. The scope filter sits at the end of them — after the only join
+ * that can say which district a finding belongs to, and before anything is
+ * returned.
+ */
+const scopedToInstitute = (scope) => [
+  {
+    $lookup: {
+      from: 'inspectionreports',
+      localField: 'reportId',
+      foreignField: '_id',
+      as: 'report',
+      pipeline: [{ $project: { assignmentId: 1, submittedAt: 1 } }],
+    },
+  },
+  { $unwind: '$report' },
+  {
+    $lookup: {
+      from: 'assignments',
+      localField: 'report.assignmentId',
+      foreignField: '_id',
+      as: 'assignment',
+      pipeline: [{ $project: { instituteId: 1, cycleId: 1, inspectorId: 1 } }],
+    },
+  },
+  { $unwind: '$assignment' },
+  ...(scope ? [{ $match: { 'assignment.instituteId': { $in: scope.map(toId) } } }] : []),
+];
+
 const slaState = (finding, now) => {
   if (!finding.slaDueAt) return 'NONE';
   const remaining = new Date(finding.slaDueAt) - now;
@@ -90,9 +121,39 @@ export async function getCycles(req, res) {
   ]);
   const byCycle = new Map(counts.map((row) => [String(row._id), row]));
 
+  // §14: the log, not just its size. "3 deferred" tells an officer nothing —
+  // choosing between an override and a reschedule needs the institute and the
+  // constraint that bound. Names are looked up only for institutes this token
+  // may see, so an out-of-scope deferral is never read, not merely never shown.
+  const inScope = scope && new Set(scope);
+  const deferredIds = [
+    ...new Set(cycles.flatMap((c) => (c.deferred ?? []).map((d) => String(d.instituteId)))),
+  ].filter((id) => !inScope || inScope.has(id));
+  const deferredInstitutes = new Map(
+    (deferredIds.length
+      ? await Institute.find({ _id: { $in: deferredIds.map(toId) } })
+          .select('name district')
+          .lean()
+      : []
+    ).map((row) => [String(row._id), row]),
+  );
+
   return res.json({
     cycles: cycles.map((cycle) => {
       const count = byCycle.get(String(cycle._id)) ?? {};
+      // Institutes the engine could not place under C1–C4. An officer's
+      // reschedule queue, and §14's evidence that the constraints are real.
+      const deferrals = (cycle.deferred ?? [])
+        .filter((row) => deferredInstitutes.has(String(row.instituteId)))
+        .map((row) => {
+          const institute = deferredInstitutes.get(String(row.instituteId));
+          return {
+            instituteId: String(row.instituteId),
+            name: institute.name,
+            district: institute.district,
+            reason: row.reason,
+          };
+        });
       return {
         id: String(cycle._id),
         periodStart: cycle.periodStart,
@@ -105,9 +166,8 @@ export async function getCycles(req, res) {
         completed: count.completed ?? 0,
         overdue: count.overdue ?? 0,
         cancelled: count.cancelled ?? 0,
-        // Institutes the engine could not place under C1–C4. An officer's
-        // reschedule queue, and §14's evidence that the constraints are real.
-        deferred: cycle.deferred?.length ?? 0,
+        deferred: deferrals.length,
+        deferrals,
         constraintRelaxations: cycle.constraintRelaxations ?? [],
       };
     }),
@@ -130,29 +190,7 @@ export async function getFindings(req, res) {
   const rows = await Finding.aggregate([
     { $match: status === 'ALL' ? {} : { status } },
     { $sort: { slaDueAt: 1 } },
-    {
-      $lookup: {
-        from: 'inspectionreports',
-        localField: 'reportId',
-        foreignField: '_id',
-        as: 'report',
-        pipeline: [{ $project: { assignmentId: 1, submittedAt: 1 } }],
-      },
-    },
-    { $unwind: '$report' },
-    {
-      $lookup: {
-        from: 'assignments',
-        localField: 'report.assignmentId',
-        foreignField: '_id',
-        as: 'assignment',
-        pipeline: [{ $project: { instituteId: 1, cycleId: 1, inspectorId: 1 } }],
-      },
-    },
-    { $unwind: '$assignment' },
-    // The scope filter sits here, after the only join that can tell us which
-    // institute a finding belongs to, and before anything is returned.
-    ...(scope ? [{ $match: { 'assignment.instituteId': { $in: scope.map(toId) } } }] : []),
+    ...scopedToInstitute(scope),
     { $limit: limit },
     {
       $lookup: {
@@ -193,6 +231,59 @@ export async function getFindings(req, res) {
         district: row.institute.district,
         riskSignature: row.institute.riskSignature,
       },
+    })),
+  });
+}
+
+/**
+ * `GET /api/dashboard/unactioned` — §14's unactioned-flag panel.
+ *
+ * Counts per owning officer, not a page of rows. The queue read caps at 500 and
+ * the whole point of this panel is how big a backlog has grown, so counting a
+ * capped list would understate exactly the number it exists to raise.
+ *
+ * BREACHED is the one SLA state the database can answer by itself: `slaDueAt`
+ * is stored and the test is a comparison against the clock. DUE_SOON needs the
+ * three-day window the reader defines, which is why the queue still derives it.
+ */
+export async function getUnactioned(req, res) {
+  const now = new Date();
+  const scope = await scopeOf(req.user);
+
+  const rows = await Finding.aggregate([
+    { $match: { status: 'OPEN', slaDueAt: { $lt: now } } },
+    ...scopedToInstitute(scope),
+    {
+      $group: {
+        _id: '$ownerId',
+        breached: { $sum: 1 },
+        severe: { $sum: { $cond: [{ $in: ['$severity', ['HIGH', 'CRITICAL']] }, 1, 0] } },
+        oldest: { $min: '$report.submittedAt' },
+      },
+    },
+    { $sort: { breached: -1 } },
+    {
+      $lookup: {
+        from: 'users',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'owner',
+        pipeline: [{ $project: { name: 1, homeDistrict: 1 } }],
+      },
+    },
+  ]);
+
+  return res.json({
+    total: rows.reduce((sum, row) => sum + row.breached, 0),
+    officers: rows.map((row) => ({
+      // A null owner is not a rounding error: an unowned breached finding is
+      // the worst row on the panel, because nobody is late for it.
+      ownerId: row._id ? String(row._id) : null,
+      name: row.owner?.[0]?.name ?? null,
+      district: row.owner?.[0]?.homeDistrict ?? null,
+      breached: row.breached,
+      severe: row.severe,
+      oldestDaysOpen: Math.max(0, Math.floor((now - new Date(row.oldest)) / MS_DAY)),
     })),
   });
 }
