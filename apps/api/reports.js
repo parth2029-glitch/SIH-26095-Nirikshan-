@@ -43,7 +43,9 @@ const reject = (code, message) => {
  * only agree because they agree about this.
  */
 const expectedSignature = (key, report) =>
-  createHmac('sha256', key).update(canonicalJSON(reportSignaturePayload(report)), 'utf8').digest('hex');
+  createHmac('sha256', key)
+    .update(canonicalJSON(reportSignaturePayload(report)), 'utf8')
+    .digest('hex');
 
 /** Constant-time hex compare — a signature check that leaks timing is not one. */
 function signatureMatches(expected, actual) {

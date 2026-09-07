@@ -7,8 +7,14 @@
  * server is reachable from this valley" — the retry has to exist either way.
  * So: a ticker, an exponential backoff, and the failure itself as the signal.
  */
-import { ApiError, submitReports } from './api.js';
-import { dueOutbox, markOutbox, outboxCounts } from './db.js';
+import { ApiError, submitReports, uploadEvidence } from './api.js';
+import {
+  dueOutbox,
+  markEvidenceUploaded,
+  markOutbox,
+  outboxCounts,
+  pendingEvidence,
+} from './db.js';
 
 const BATCH = 20;
 const TICK_MS = 30_000;
@@ -45,6 +51,25 @@ async function fail(row, message) {
 }
 
 /**
+ * The photographs, once their reports have server ids (§10).
+ *
+ * No backoff row of their own: the next tick retries, and the server dedupes on
+ * (report, clientId), so a lost response costs one re-upload and never a second
+ * stored copy. The first failure stops the pass rather than pushing twenty
+ * images at a link that has just proved it is not there.
+ */
+async function drainEvidence() {
+  for (const item of await pendingEvidence(BATCH)) {
+    try {
+      await uploadEvidence(item.reportId, item);
+    } catch {
+      return;
+    }
+    await markEvidenceUploaded(item.clientId);
+  }
+}
+
+/**
  * One pass. Safe to call concurrently — the second caller returns immediately
  * rather than sending the same rows twice.
  */
@@ -53,7 +78,7 @@ export async function drain() {
   running = true;
   try {
     const rows = await dueOutbox(BATCH);
-    if (rows.length === 0) return;
+    if (rows.length === 0) return drainEvidence();
 
     await Promise.all(rows.map((row) => markOutbox(row.clientId, { status: 'SENDING' })));
     await notify();
@@ -80,11 +105,19 @@ export async function drain() {
     for (const row of rows) {
       const result = byClientId.get(row.clientId);
       if (result?.status === 'ACCEPTED') {
-        await markOutbox(row.clientId, { status: 'DONE', serverId: result.reportId, lastError: null });
+        await markOutbox(row.clientId, {
+          status: 'DONE',
+          serverId: result.reportId,
+          lastError: null,
+        });
       } else {
         await fail(row, result?.error?.message ?? 'No result returned for this report.');
       }
     }
+
+    // Reports first, then their images: an evidence upload needs the server id
+    // the accepted report just came back with.
+    await drainEvidence();
   } finally {
     running = false;
     await notify();

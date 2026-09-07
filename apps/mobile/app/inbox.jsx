@@ -77,9 +77,7 @@ export default function Inbox() {
       ListHeaderComponent={
         <>
           <SyncStatus />
-          {state.error && state.rows.length > 0 ? (
-            <Text style={s.muted}>{state.error}</Text>
-          ) : null}
+          {state.error && state.rows.length > 0 ? <Text style={s.muted}>{state.error}</Text> : null}
         </>
       }
       ListEmptyComponent={<Text style={s.muted}>{state.error ?? t('inbox.empty')}</Text>}

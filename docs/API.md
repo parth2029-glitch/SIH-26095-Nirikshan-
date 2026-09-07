@@ -55,6 +55,7 @@ Every non-2xx response uses this shape.
 | POST | `/api/reports` | INSPECTOR | §9 |
 | POST | `/api/reports/:id/evidence` | INSPECTOR | §10 |
 | GET | `/api/reports/:id/trust` | DISTRICT, DIVISION | §11 |
+| GET | `/api/evidence/:id/thumbnail` | DISTRICT, DIVISION, AUDITOR | §10 |
 | POST | `/api/overrides` | DISTRICT, DIVISION | §6 |
 | GET | `/api/overrides/verify-chain` | DIVISION, AUDITOR | §6 |
 | GET | `/api/overrides/officer-rates` | DIVISION | §6 |
@@ -413,12 +414,11 @@ not a rejection).
   "id": "66f0a1b2c3d4e5f600000501",
   "reportId": "66f0a1b2c3d4e5f600000401",
   "storageKey": "evidence/2026/10/66f0a1b2c3d4e5f600000501.jpg",
-  "thumbnailUrl": "https://cdn.example.org/thumb/66f0a1b2c3d4e5f600000501.jpg",
+  "thumbnailUrl": "/api/evidence/66f0a1b2c3d4e5f600000501/thumbnail",
   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "deviceSha256Match": true,
   "dHash": "f0e1d2c3b4a59687",
-  "deviceDHash": "f0e1d2c3b4a59687",
-  "deviceServerDHashDistance": 2,
+  "deviceDHash": "f0e1d2c3b4a59683",
   "capturedAt": "2026-10-08T11:20:00.000Z",
   "location": {
     "type": "Point",
@@ -431,8 +431,13 @@ not a rejection).
 ```
 
 `dHash` is the **server** value from `sharp().resize(9,8).greyscale().raw()`. It is the only value
-the L1 reuse check compares against. `deviceSha256Match: false` is recorded as a flag, never a
-rejection — the score routes review, it does not block submission.
+the L1 reuse check compares against. `deviceSha256Match: false` is recorded as a flag
+(`DEVICE_SHA256_MISMATCH`), never a rejection — the score routes review, it does not block
+submission. `deviceSha256Match` is `null` when the same `clientId` has already been stored: a
+retried upload returns the row it collided with rather than re-scoring a claim.
+
+Originals are stored unmodified. `thumbnailUrl` points at a derived object under its own key, so
+nothing ever rewrites the bytes the hashes were taken over.
 
 ### `GET /api/reports/:id/trust`
 
@@ -450,13 +455,12 @@ rejection — the score routes review, it does not block submission.
       "id": "L1",
       "label": "Image reuse",
       "weight": "HIGH",
-      "deduction": 35,
+      "deduction": 25,
       "fired": true,
-      "reason": "Photo matches evidence submitted for this institute in cycle 7 (Hamming distance 3 of 64).",
+      "reason": "1 photograph matches evidence already on file (closest: 3 of 64 bits different). Nearest match came from report 66f0a1b2c3d4e5f600000388.",
       "evidence": {
-        "evidenceId": "66f0a1b2c3d4e5f600000501",
-        "matchedReportId": "66f0a1b2c3d4e5f600000388",
-        "matchedCycleId": "66f0a1b2c3d4e5f600000207",
+        "matchedReportIds": ["66f0a1b2c3d4e5f600000388"],
+        "evidenceIds": ["66f0a1b2c3d4e5f600000501"],
         "hammingDistance": 3
       }
     },
@@ -464,26 +468,35 @@ rejection — the score routes review, it does not block submission.
       "id": "L3",
       "label": "Mock location",
       "weight": "CRITICAL",
-      "deduction": 23,
+      "deduction": 40,
       "fired": true,
-      "reason": "The device reported that its location came from a mock provider.",
+      "reason": "Location came from a mock provider — the GPS trail cannot be trusted.",
       "evidence": { "mocked": true }
     },
     {
       "id": "L2",
-      "label": "Byte duplicate",
+      "label": "Byte-level duplicate",
       "weight": "HIGH",
       "deduction": 0,
       "fired": false,
-      "reason": "No exact byte-level duplicate found."
+      "reason": "No byte-for-byte duplicate of any stored file."
     }
   ],
   "signatureValid": true
 }
 ```
 
-All six factors L1–L6 are always present. Unfired ones carry `fired: false` and `deduction: 0`, so
-the dashboard can show what was checked and passed, not only what failed.
+All six factors L1–L6 are always present. Unfired ones carry `fired: false`, `deduction: 0` and no
+`evidence` block, so the dashboard can show what was checked and passed, not only what failed.
+L7–L9 appear only when they fire; L9 is disabled until §11's fixture measurement sets its
+threshold (`TRUST_THRESHOLDS.deviceHashHamming`).
+
+The score is computed on read, not stored: evidence for a report keeps arriving after the report
+itself does, so a cached number would be stale exactly when it matters. `signatureValid` restates
+§9's intake check — an unsigned report is rejected there and never reaches the database.
+
+Every `reason` is written for the officer reading it, never for a log. `deduction` comes from
+`TRUST_WEIGHTS` in `packages/core/constants.js`; nothing on the submission path reads any of it.
 
 ---
 

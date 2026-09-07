@@ -148,10 +148,10 @@ export async function evidenceFor(reportClientId) {
  */
 export async function saveInbox(payload) {
   const conn = await db();
-  await conn.runAsync(
-    'INSERT OR REPLACE INTO inbox (id, payload, fetchedAt) VALUES (1, ?, ?)',
-    [JSON.stringify(payload), new Date().toISOString()],
-  );
+  await conn.runAsync('INSERT OR REPLACE INTO inbox (id, payload, fetchedAt) VALUES (1, ?, ?)', [
+    JSON.stringify(payload),
+    new Date().toISOString(),
+  ]);
 }
 
 export async function loadInbox() {
@@ -193,6 +193,30 @@ export async function markOutbox(clientId, patch) {
     `UPDATE outbox SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE clientId = ?`,
     [...keys.map((k) => patch[k]), clientId],
   );
+}
+
+/**
+ * Photographs the server is ready to receive: their report has been accepted
+ * and come back with an id, and the file has not gone up yet (§10).
+ *
+ * The join is what makes evidence outlive its draft — the outbox row holds the
+ * server's report id, and until it does there is nowhere to send the image.
+ */
+export async function pendingEvidence(limit) {
+  const conn = await db();
+  const rows = await conn.getAllAsync(
+    `SELECT e.*, o.serverId AS reportId FROM evidence e
+       JOIN outbox o ON o.clientId = e.reportClientId
+      WHERE e.uploaded = 0 AND o.status = 'DONE' AND o.serverId IS NOT NULL
+      ORDER BY e.capturedAt LIMIT ?`,
+    [limit],
+  );
+  return rows.map((row) => ({ ...row, location: row.location && JSON.parse(row.location) }));
+}
+
+export async function markEvidenceUploaded(clientId) {
+  const conn = await db();
+  await conn.runAsync('UPDATE evidence SET uploaded = 1 WHERE clientId = ?', [clientId]);
 }
 
 /** What the sync indicator shows: `{ PENDING: 2, DONE: 7, ... }`. */

@@ -119,7 +119,9 @@ test('constants: the shared vocabulary is intact', () => {
 test('dhash: RGBA collapses to Rec. 601 luma, one sample per pixel', () => {
   // Pure red, green, blue, white — the coefficients are the whole point, so a
   // transposed pair would show up here and nowhere else.
-  const rgba = Uint8Array.from([255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255]);
+  const rgba = Uint8Array.from([
+    255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255,
+  ]);
   assert.deepEqual(Array.from(greyFromRgba(rgba)), [76, 150, 29, 255]);
   // Alpha is ignored, not multiplied in: a transparent pixel is still a pixel.
   assert.deepEqual(Array.from(greyFromRgba(Uint8Array.from([255, 255, 255, 0]))), [255]);

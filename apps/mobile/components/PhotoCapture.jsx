@@ -42,8 +42,12 @@ export default function PhotoCapture({ item, evidence, onCaptured }) {
       {evidence ? (
         <View style={{ gap: 6 }}>
           <Image source={{ uri: evidence.uri }} style={{ height: 160, borderRadius: 8 }} />
-          <Text style={s.muted}>{t('inspect.photoHash', { hash: evidence.sha256.slice(0, 12) })}</Text>
-          {evidence.location?.mocked ? <Text style={s.danger}>{t('inspect.photoMocked')}</Text> : null}
+          <Text style={s.muted}>
+            {t('inspect.photoHash', { hash: evidence.sha256.slice(0, 12) })}
+          </Text>
+          {evidence.location?.mocked ? (
+            <Text style={s.danger}>{t('inspect.photoMocked')}</Text>
+          ) : null}
         </View>
       ) : null}
 

@@ -24,6 +24,16 @@ export async function hmacSha256(sha256, keyBytes, messageBytes) {
     return out;
   };
 
-  const inner = await sha256(concat(key.map((byte) => byte ^ 0x36), messageBytes));
-  return sha256(concat(key.map((byte) => byte ^ 0x5c), inner));
+  const inner = await sha256(
+    concat(
+      key.map((byte) => byte ^ 0x36),
+      messageBytes,
+    ),
+  );
+  return sha256(
+    concat(
+      key.map((byte) => byte ^ 0x5c),
+      inner,
+    ),
+  );
 }

@@ -5,6 +5,8 @@ import { listMyAssignments } from './assignments.js';
 import { assignCycle, createCycle, revealCycle, verifyCycle } from './cycles.js';
 import { getOfficerRates, getVerifyChain, postOverride } from './overrides.js';
 import { postReports } from './reports.js';
+import { getThumbnail, postEvidence } from './evidence.js';
+import { getTrust } from './trust.js';
 import { Institute } from './models.js';
 
 const repoFile = (path) => fileURLToPath(new URL(`../../${path}`, import.meta.url));
@@ -48,6 +50,19 @@ export function createApp() {
   app.get('/api/assignments/mine', requireRole('INSPECTOR'), listMyAssignments);
   // Takes an array — the offline outbox drains in batches (docs/API.md).
   app.post('/api/reports', requireRole('INSPECTOR'), postReports);
+
+  // ── Evidence & trust (§10, §11, PRD F3) ────────────────────────────────────
+  // One image per request. The report arrives first and its photographs follow
+  // as separate uploads, so the outbox can retry a failed image on its own.
+  app.post('/api/reports/:id/evidence', requireRole('INSPECTOR'), postEvidence);
+  // Read-only and off the submission path: the score routes review, never a
+  // rejection (PRD F3).
+  app.get('/api/reports/:id/trust', requireRole('DISTRICT', 'DIVISION'), getTrust);
+  app.get(
+    '/api/evidence/:id/thumbnail',
+    requireRole('DISTRICT', 'DIVISION', 'AUDITOR'),
+    getThumbnail,
+  );
 
   app.get(
     '/api/institutes/:id',

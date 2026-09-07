@@ -14,14 +14,17 @@ export class ApiError extends Error {
 
 async function request(path, { method = 'GET', body, auth = true, headers } = {}) {
   const bearer = auth ? await session.token() : null;
+  // A multipart body sets its own content-type, boundary and all. Overriding it
+  // with application/json would produce a request no parser can read.
+  const multipart = body instanceof FormData;
   const res = await fetch(BASE + path, {
     method,
     headers: {
-      ...(body && { 'content-type': 'application/json' }),
+      ...(body && !multipart && { 'content-type': 'application/json' }),
       ...(bearer && { authorization: `Bearer ${bearer}` }),
       ...headers,
     },
-    ...(body && { body: JSON.stringify(body) }),
+    ...(body && { body: multipart ? body : JSON.stringify(body) }),
   });
 
   const payload = await res.json().catch(() => ({}));
@@ -61,6 +64,28 @@ export const submitReports = (reports, idempotencyKey) =>
     body: { reports },
     headers: { 'idempotency-key': idempotencyKey },
   });
+
+/**
+ * One photograph, multipart (§10).
+ *
+ * The file goes by `uri`: React Native's FormData streams it off disk, so a
+ * four-megabyte JPEG never becomes a base64 string in memory — which §8's hash
+ * pass has to do once, and should not have to do twice.
+ *
+ * The device's own sha256 and dHash ride along as claims. The server recomputes
+ * both from the bytes that arrive and scores the difference; nothing here is
+ * trusted, and nothing here blocks.
+ */
+export function uploadEvidence(reportId, item) {
+  const form = new FormData();
+  form.append('file', { uri: item.uri, name: `${item.clientId}.jpg`, type: 'image/jpeg' });
+  form.append('clientId', item.clientId);
+  form.append('sha256', item.sha256);
+  form.append('deviceDHash', item.deviceDHash);
+  form.append('capturedAt', item.capturedAt);
+  if (item.location) form.append('location', JSON.stringify(item.location));
+  return request(`/api/reports/${reportId}/evidence`, { method: 'POST', body: form });
+}
 
 // ── Inbox cache ──────────────────────────────────────────────────────────────
 // A module variable in front of SQLite, not instead of it (§9). The read path

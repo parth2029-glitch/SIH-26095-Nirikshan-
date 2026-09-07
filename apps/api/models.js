@@ -209,6 +209,10 @@ const evidenceItemSchema = new Schema(
 );
 evidenceItemSchema.index({ sha256: 1 });
 evidenceItemSchema.index({ dHashBands: 1 });
+// One upload per client-generated id, per report — the same idempotency rule as
+// InspectionReport.clientId, for the same reason: a handset that lost the
+// response retries, and the retry has to collide rather than store a second copy.
+evidenceItemSchema.index({ reportId: 1, clientId: 1 }, { unique: true });
 
 // ── Finding ──────────────────────────────────────────────────────────────────
 const findingSchema = new Schema(
